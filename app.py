@@ -61,7 +61,6 @@ with st.sidebar.form("formulario", clear_on_submit=True):
         "7. Averías", "8. Cambios", "9. Publicidad", "10. Otro"
     ])
     obs = st.text_area("Observaciones")
-
     guardar = st.form_submit_button("Guardar")
 
 if guardar:
@@ -70,14 +69,8 @@ if guardar:
         canal, satisfaccion, reclamos, motivo, obs
     ]], columns=COLUMNAS)
 
-    st.session_state.datos_dashboard = pd.concat(
-        [st.session_state.datos_dashboard, nuevo], ignore_index=True
-    )
-
-    st.session_state.datos_historico = pd.concat(
-        [st.session_state.datos_historico, nuevo], ignore_index=True
-    )
-
+    st.session_state.datos_dashboard = pd.concat([st.session_state.datos_dashboard, nuevo], ignore_index=True)
+    st.session_state.datos_historico = pd.concat([st.session_state.datos_historico, nuevo], ignore_index=True)
     st.sidebar.success("✅ Registro guardado")
 
 # ==========================================
@@ -90,79 +83,67 @@ tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "📁 Histórico", "📑 Informe"]
 df = st.session_state.datos_dashboard
 
 # ==========================================
-# DASHBOARD
+# PESTAÑA 1: DASHBOARD
 # ==========================================
 with tab1:
     if df.empty:
-        st.warning("Sin datos")
+        st.warning("Sin datos registrados aún.")
     else:
-        st.metric("Registros", len(df))
-        st.metric("Satisfacción Promedio", f"{df['Satisfaccion'].mean():.1f}%")
-        st.metric("Total PQRS", int(df['Reclamos'].sum()))
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Registros", len(df))
+        c2.metric("Satisfacción Promedio", f"{df['Satisfaccion'].mean():.1f}%")
+        c3.metric("Total PQRS", int(df['Reclamos'].sum()))
 
         st.line_chart(df.groupby('Fecha')['Satisfaccion'].mean())
 
-        # FIX ERROR
-        if 'Motivo PQRS' in df.columns:
-            df_m = df[df['Motivo PQRS'] != "Ninguna (0 PQRS)"]
-            if not df_m.empty:
-                st.bar_chart(df_m['Motivo PQRS'].value_counts())
-            else:
-                st.success("Sin PQRS")
+        df_m = df[df['Motivo PQRS'] != "Ninguna (0 PQRS)"]
+        if not df_m.empty:
+            st.bar_chart(df_m['Motivo PQRS'].value_counts())
         else:
-            st.warning("No existe columna Motivo PQRS")
+            st.success("No hay motivos de reclamo registrados.")
 
 # ==========================================
-# HISTÓRICO
+# PESTAÑA 2: HISTÓRICO
 # ==========================================
 with tab2:
-    st.dataframe(st.session_state.datos_historico)
+    st.subheader("Base de Datos de Auditoría")
+    st.dataframe(st.session_state.datos_historico, use_container_width=True)
 
     if not st.session_state.datos_historico.empty:
-        csv = st.session_state.datos_historico.to_csv(index=False).encode()
-        st.download_button("Descargar CSV", csv, "reporte.csv")
+        csv = st.session_state.datos_historico.to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Descargar CSV", csv, "reporte_tq.csv", "text/csv")
 
-    if st.button("🗑️ Borrar todo"):
+    if st.button("🗑️ Borrar todo el historial"):
         st.session_state.datos_dashboard = pd.DataFrame(columns=COLUMNAS)
         st.session_state.datos_historico = pd.DataFrame(columns=COLUMNAS)
         st.rerun()
 
 # ==========================================
-# INFORME
+# PESTAÑA 3: INFORME
 # ==========================================
 with tab3:
-    df_hist = st.session_state.datos_historico.copy()
+    st.subheader("Dictamen de Calidad ISO 9001")
+    df_h = st.session_state.datos_historico
 
-    if df_hist.empty:
-        st.info("Sin datos")
+    if df_h.empty:
+        st.info("Ingrese datos para generar el dictamen automático.")
     else:
-        st.success("Sistema activo bajo ISO 9001")
-
-        # FIX DEFINITIVO
-        if 'Motivo PQRS' in df_hist.columns:
-            df_p = df_hist[df_hist['Motivo PQRS'] != "Ninguna (0 PQRS)"]
-        else:
-            df_p = pd.DataFrame()
+        st.success("Trazabilidad conforme a la norma.")
+        
+        # Filtramos los que tienen reclamos reales
+        df_p = df_h[df_h['Motivo PQRS'] != "Ninguna (0 PQRS)"]
 
         if not df_p.empty:
-            if not df_p.empty and 'Motivo PQRS' in df_p.columns:
-    moda = df_p['Motivo PQRS'].mode()
-
-    if not moda.empty:
-        top = moda[0]
-        st.error(f"Problema principal: {top}")
-
-        solucion = SOLUCIONES_ISO.get(top, "Revisión general")
-        st.info(f"Solución: {solucion}")
-    else:
-        st.info("No hay suficientes datos para calcular problema principal")
-else:
-    st.success("Sin problemas detectados")
-
-            solucion = SOLUCIONES_ISO.get(top, "Revisión general")
-            st.info(f"Solución: {solucion}")
+            # Calculamos el motivo más frecuente
+            top_motivo = df_p['Motivo PQRS'].mode()[0]
+            st.error(f"**Hallazgo Crítico:** {top_motivo}")
+            
+            # Buscamos la solución en el diccionario
+            propuesta = SOLUCIONES_ISO.get(top_motivo, "Revisión técnica de procesos.")
+            st.info(f"**Plan de Acción:** {propuesta}")
         else:
-            st.success("Sin problemas detectados")
+            st.success("No se detectan causas raíz de fallas. Proceso bajo control.")
 
 # ==========================================
-st.markdown("© 2026 Auditoría TQ")
+st.markdown("---")
+st.markdown("<p style='text-align: center;'>© 2026 Auditoría TQ - Mejora Continua</p>", unsafe_allow_html=True)
