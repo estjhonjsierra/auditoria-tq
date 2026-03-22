@@ -34,4 +34,4 @@ with col_despues:
     fig_exito = px.bar(data_exito, x='Mes', y='Satisfacción', title="Reporte Gerencial Automático", color='Satisfacción', color_continuous_scale='Viridis')
     st.plotly_chart(fig_exito, use_container_width=True)
 
-st.info("💡 Conclusión: Esta herramienta elimina la No Conformidad al asegurar la trazabilidad total.")streamlit run app_tq.py
+st.info("💡 Conclusión: Esta herramienta elimina la No Conformidad al asegurar la trazabilidad total.")
