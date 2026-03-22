@@ -145,8 +145,19 @@ with tab3:
             df_p = pd.DataFrame()
 
         if not df_p.empty:
-            top = df_p['Motivo PQRS'].mode()[0]
-            st.error(f"Problema principal: {top}")
+            if not df_p.empty and 'Motivo PQRS' in df_p.columns:
+    moda = df_p['Motivo PQRS'].mode()
+
+    if not moda.empty:
+        top = moda[0]
+        st.error(f"Problema principal: {top}")
+
+        solucion = SOLUCIONES_ISO.get(top, "Revisión general")
+        st.info(f"Solución: {solucion}")
+    else:
+        st.info("No hay suficientes datos para calcular problema principal")
+else:
+    st.success("Sin problemas detectados")
 
             solucion = SOLUCIONES_ISO.get(top, "Revisión general")
             st.info(f"Solución: {solucion}")
