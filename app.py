@@ -19,52 +19,142 @@ except:
 # ================================
 st.set_page_config(page_title="Auditoría de Calidad TQ", layout="wide", page_icon="💊")
 
-# 📊 MATRIZ TÉCNICA ISO 9001 AMPLIADA (Nivel Profesional)
+# 📊 MATRIZ TÉCNICA ISO 9001 AMPLIADA (15 Motivos de Campo)
 MATRIZ_ISO = {
-   "Calidad": {
-       "numeral": "8.7 Control de las salidas no conformes",
-       "hallazgo": "Desviación en los estándares técnicos del producto o empaque.",
-       "solucion": "Bloqueo inmediato de lote, análisis de causa raíz (Ishikawa) y disposición final.",
-       "riesgo": "ALTO 🔴",
-       "causa": "Falla en control de procesos productivos o materias primas.",
-       "responsable": "Gerente de Calidad / Planta",
-       "sla": "24 Horas"
+    "Producto Vencido": {
+        "numeral": "8.7 Control de las salidas no conformes",
+        "hallazgo": "Hallazgo de lotes con fecha caducada en estantería.",
+        "solucion": "Retiro inmediato del producto, bloqueo de lote y envío a destrucción.",
+        "riesgo": "ALTO 🔴",
+        "causa": "Falla grave en la rotación FIFO en el punto de venta.",
+        "responsable": "Mercaderista / Supervisor",
+        "sla": "Inmediato"
     },
-   "Precios": {
-       "numeral": "8.2.1 Comunicación con el cliente",
-       "hallazgo": "Inconsistencia entre precio facturado y precio exhibido.",
-       "solucion": "Auditoría de lista de precios en SAP y actualización de POP.",
-       "riesgo": "MEDIO 🟡",
-       "causa": "Desincronización de bases de datos comerciales.",
-       "responsable": "Director Comercial / Facturación",
-       "sla": "48 Horas"
+    "Empaque Dañado": {
+        "numeral": "8.5.4 Preservación",
+        "hallazgo": "Cajas abolladas, sellos rotos o etiquetas sucias.",
+        "solucion": "Retiro de la exhibición y gestión de avería/cambio.",
+        "riesgo": "MEDIO 🟡",
+        "causa": "Mala manipulación logística o de bodega en el PDV.",
+        "responsable": "Mercaderista",
+        "sla": "24 Horas"
     },
-   "Logística": {
-       "numeral": "8.4 Control de procesos externos",
-       "hallazgo": "Incumplimiento en tiempos de entrega o averías.",
-       "solucion": "Re-evaluación del transportador y optimización de ruta.",
-       "riesgo": "ALTO 🔴",
-       "causa": "Falla en la cadena de suministros o transporte tercero.",
-       "responsable": "Jefe de Logística / Distribución",
-       "sla": "72 Horas"
+    "Agotado en Góndola": {
+        "numeral": "8.5.1 Control de la producción y prestación del servicio",
+        "hallazgo": "El producto está en bodega pero no está exhibido.",
+        "solucion": "Surtido inmediato desde la bodega del punto de venta.",
+        "riesgo": "MEDIO 🟡",
+        "causa": "Falta de frecuencia de surtido por parte del personal.",
+        "responsable": "Mercaderista / Auxiliar PDV",
+        "sla": "Inmediato"
     },
-   "Agotados": {
-       "numeral": "8.1 Planificación y control operacional",
-       "hallazgo": "Ruptura de stock que afecta la continuidad.",
-       "solucion": "Ajuste de pronóstico de demanda y aceleración de reposición.",
-       "riesgo": "ALTO 🔴",
-       "causa": "Error en proyección de demanda o retraso de proveedores.",
-       "responsable": "Gerente de Compras / Planeación",
-       "sla": "48 Horas"
+    "Agotado en PDV": {
+        "numeral": "8.1 Planificación y control operacional",
+        "hallazgo": "No hay existencia física del producto (quiebre de stock).",
+        "solucion": "Generar pedido urgente y revisar mínimos en el sistema.",
+        "riesgo": "ALTO 🔴",
+        "causa": "Falla en el pronóstico de demanda o retraso de entrega.",
+        "responsable": "Comercial / Compras PDV",
+        "sla": "48 Horas"
     },
-   "Atención": {
-       "numeral": "7.2 Competencia",
-       "hallazgo": "Falta de conocimiento técnico del personal.",
-       "solucion": "Plan de re-entrenamiento en Universidad TQ.",
-       "riesgo": "BAJO 🟢",
-       "causa": "Brecha de capacitación en nuevos protocolos.",
-       "responsable": "Gestión Humana / Capacitación",
-       "sla": "1 Semana"
+    "Precio Incorrecto": {
+        "numeral": "8.2.1 Comunicación con el cliente",
+        "hallazgo": "El precio en etiqueta no coincide con el sistema (caja).",
+        "solucion": "Actualización inmediata de la cenefa o viñeta de precio.",
+        "riesgo": "ALTO 🔴",
+        "causa": "Desincronización de bases de datos de precios.",
+        "responsable": "Administrador PDV",
+        "sla": "24 Horas"
+    },
+    "Falta Marcación Precio": {
+        "numeral": "8.2.1 Comunicación con el cliente",
+        "hallazgo": "El producto no tiene visibilidad de precio para el cliente.",
+        "solucion": "Imprimir y colocar la etiqueta de precio faltante.",
+        "riesgo": "MEDIO 🟡",
+        "causa": "Omisión en el protocolo de exhibición.",
+        "responsable": "Mercaderista",
+        "sla": "Inmediato"
+    },
+    "Exhibición Deficiente": {
+        "numeral": "8.5.1 Control de la producción y prestación del servicio",
+        "hallazgo": "El producto no cumple con el planograma o está escondido.",
+        "solucion": "Ajustar la cara del producto según planograma oficial TQ.",
+        "riesgo": "MEDIO 🟡",
+        "causa": "Desconocimiento o no aplicación del estándar visual.",
+        "responsable": "Mercaderista / Supervisor",
+        "sla": "24 Horas"
+    },
+    "Material POP Ausente": {
+        "numeral": "8.2.1 Comunicación con el cliente",
+        "hallazgo": "Rompetráficos, saltarines sucios, rotos o inexistentes.",
+        "solucion": "Instalación de material publicitario nuevo y retiro del dañado.",
+        "riesgo": "BAJO 🟢",
+        "causa": "Falta de dotación o daño por terceros en la tienda.",
+        "responsable": "Trade Marketing / Mercaderista",
+        "sla": "72 Horas"
+    },
+    "Invasión Competencia": {
+        "numeral": "8.2.2 Determinación de requisitos para los productos",
+        "hallazgo": "Invasión de productos de la competencia en el espacio negociado de TQ.",
+        "solucion": "Recuperar el espacio (Share of Shelf) y notificar al administrador.",
+        "riesgo": "ALTO 🔴",
+        "causa": "Prácticas agresivas de la competencia o descuido del espacio.",
+        "responsable": "Supervisor Comercial",
+        "sla": "24 Horas"
+    },
+    "Producto Mal Ubicado": {
+        "numeral": "8.5.1 Control de la producción y prestación del servicio",
+        "hallazgo": "Productos de una categoría en otra (ej. pañales en farmacia).",
+        "solucion": "Reubicación inmediata a la zona y bloque correspondiente.",
+        "riesgo": "MEDIO 🟡",
+        "causa": "Desorden en el punto o reubicación por parte del cliente.",
+        "responsable": "Mercaderista",
+        "sla": "Inmediato"
+    },
+    "Promoción No Aplicada": {
+        "numeral": "8.2.1 Comunicación con el cliente",
+        "hallazgo": "La promoción (ej. pague 2 lleve 3) no está armada o señalizada.",
+        "solucion": "Armar la dinámica, colocar el POP promocional y verificar en caja.",
+        "riesgo": "ALTO 🔴",
+        "causa": "Falla en la comunicación de la actividad promocional al PDV.",
+        "responsable": "Trade Marketing / Comercial",
+        "sla": "24 Horas"
+    },
+    "Suciedad Estantería": {
+        "numeral": "7.1.3 Infraestructura",
+        "hallazgo": "Falta de aseo en el entrepaño donde se ubica el producto.",
+        "solucion": "Limpieza profunda del módulo, góndola y productos.",
+        "riesgo": "BAJO 🟢",
+        "causa": "Falta de rutina de mantenimiento y aseo.",
+        "responsable": "Mercaderista / Auxiliar PDV",
+        "sla": "Inmediato"
+    },
+    "Falla Rotación (FIFO)": {
+        "numeral": "8.5.4 Preservación",
+        "hallazgo": "Producto nuevo puesto adelante y el viejo atrás.",
+        "solucion": "Reorganizar el inventario poniendo fechas próximas al frente.",
+        "riesgo": "MEDIO 🟡",
+        "causa": "Surtido rápido sin revisar fechas de caducidad.",
+        "responsable": "Mercaderista",
+        "sla": "Inmediato"
+    },
+    "Error Inventario": {
+        "numeral": "8.5.1 Control de la producción y prestación del servicio",
+        "hallazgo": "Sistema indica existencia pero físicamente hay cero.",
+        "solucion": "Solicitar ajuste o conteo cíclico al inventarista del PDV.",
+        "riesgo": "ALTO 🔴",
+        "causa": "Robo, merma no reportada o error de facturación.",
+        "responsable": "Administrador PDV / Auditor",
+        "sla": "72 Horas"
+    },
+    "Mala Atención": {
+        "numeral": "7.2 Competencia",
+        "hallazgo": "Queja directa del consumidor sobre el servicio o asesoría en punto.",
+        "solucion": "Retroalimentación al dependiente y refuerzo en capacitaciones TQ.",
+        "riesgo": "ALTO 🔴",
+        "causa": "Falta de empatía o conocimiento técnico del vendedor.",
+        "responsable": "Entrenamiento / Supervisor",
+        "sla": "1 Semana"
     }
 }
 
@@ -224,7 +314,16 @@ with st.sidebar.form("form"):
     canal = st.selectbox("Canal", ["Ventas","Digital","Farma","Institucional"])
     sat = st.slider("Satisfacción (%)", 0, 100, 80)
     pqrs = st.number_input("Reclamos", 0, 100, 0)
-    motivo = st.selectbox("Motivo No Conformidad", ["Ninguna","Calidad","Precios","Logística","Agotados","Atención"])
+    
+    # === AQUI SE ACTUALIZARON LOS MOTIVOS EN EL SELECTBOX ===
+    motivo = st.selectbox("Motivo No Conformidad", [
+        "Ninguna", "Producto Vencido", "Empaque Dañado", "Agotado en Góndola", 
+        "Agotado en PDV", "Precio Incorrecto", "Falta Marcación Precio", 
+        "Exhibición Deficiente", "Material POP Ausente", "Invasión Competencia",
+        "Producto Mal Ubicado", "Promoción No Aplicada", "Suciedad Estantería",
+        "Falla Rotación (FIFO)", "Error Inventario", "Mala Atención"
+    ])
+    
     obs = st.text_area("Observaciones Técnicas")
 
     if st.form_submit_button("💾 Guardar en Base de Datos"):
