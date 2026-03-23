@@ -69,7 +69,7 @@ MATRIZ_ISO = {
 }
 
 # ================================
-# SEGURIDAD (LOGIN CORPORATIVO)
+# SEGURIDAD (ACCESO EQUIPO AUDITOR)
 # ================================
 def hash_pass(p):
     return hashlib.sha256(p.strip().encode()).hexdigest()
@@ -78,14 +78,12 @@ def check_password():
     if not st.session_state.get("password_correct", False):
         st.title("🔐 SGC TQ - Acceso al Sistema de Auditoría")
         with st.container():
-            user = st.text_input("ID de Colaborador / Usuario")
-            password = st.text_input("Clave de Acceso Corporativa", type="password")
-            if st.button("Autenticar Equipo TQ"):
-                # CREDENCIALES ACTUALIZADAS PARA EL EQUIPO
+            user = st.text_input("Usuario (Equipo Auditor)")
+            password = st.text_input("Contraseña Corporativa", type="password")
+            if st.button("Ingresar al Sistema"):
+                # CREDENCIAL ÚNICA PARA EL EQUIPO (SIN GUIONES)
                 usuarios_db = {
-                    "tq_auditoria": {"pass": hash_pass("tq_calidad_2024"), "role": "Equipo Auditor"},
-                    "gerencia_tq": {"pass": hash_pass("tq_ejecutivo_2024"), "role": "Alta Gerencia"},
-                    "admin_sgc": {"pass": hash_pass("admin_tq_9001"), "role": "Administrador de Sistema"}
+                    "equipotq": {"pass": hash_pass("tqcalidad2024"), "role": "Equipo Auditor"}
                 }
                 if user.strip() in usuarios_db and hash_pass(password) == usuarios_db[user.strip()]["pass"]:
                     st.session_state["password_correct"] = True
@@ -93,7 +91,7 @@ def check_password():
                     st.session_state["rol"] = usuarios_db[user]["role"]
                     st.rerun()
                 else:
-                    st.error("❌ Credenciales corporativas no reconocidas")
+                    st.error("❌ Acceso denegado. Verifique usuario y contraseña.")
         return False
     return True
 
@@ -179,7 +177,7 @@ def generar_pdf(df, nps, avg, usuario):
 # SIDEBAR
 # ================================
 st.sidebar.title("💊 SGC TECNOQUÍMICAS")
-st.sidebar.markdown(f"**Usuario:** `{st.session_state.usuario}`")
+st.sidebar.markdown(f"**Usuario Activo:** `{st.session_state.usuario}`")
 st.sidebar.markdown(f"**Rol:** `{st.session_state.rol}`")
 st.sidebar.markdown("---")
 
