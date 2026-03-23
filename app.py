@@ -81,7 +81,6 @@ def check_password():
             user = st.text_input("Usuario")
             password = st.text_input("Contraseña", type="password")
             if st.button("Ingresar Sistema Platinum"):
-                # CREDENCIALES CORREGIDAS SEGÚN TU SOLICITUD
                 usuarios_db = {
                     "equipotq": {"pass": hash_pass("tqcalidad2024"), "role": "Equipo Auditor"},
                     "admin": {"pass": hash_pass("tq2026"), "role": "Administrador"},
@@ -129,19 +128,31 @@ def load_data():
     return df
 
 # ================================
-# PDF EJECUTIVO MEJORADO
+# PDF EJECUTIVO MEJORADO (CON CORRECCIÓN UNICODE)
 # ================================
+def limpiar_texto(t):
+    """Limpia caracteres no compatibles con latin-1 para evitar UnicodeEncodeError"""
+    if not isinstance(t, str): return str(t)
+    replacements = {
+        "á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u",
+        "Á": "A", "É": "E", "Í": "I", "Ó": "O", "Ú": "U",
+        "ñ": "n", "Ñ": "N", "🔴": "(ALTO)", "🟡": "(MEDIO)", "🟢": "(BAJO)"
+    }
+    for char, rep in replacements.items():
+        t = t.replace(char, rep)
+    return t
+
 def generar_pdf(df, nps, avg, usuario):
     if not PDF_OK: return None
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", "B", 18)
+    pdf.set_font("Arial", "B", 16)
     pdf.set_text_color(0, 51, 102)
-    pdf.cell(190, 15, "TECNOQUIMICAS S.A - REPORTE EJECUTIVO DE CALIDAD", ln=True, align="C")
+    pdf.cell(190, 15, limpiar_texto("TECNOQUIMICAS S.A - REPORTE EJECUTIVO DE CALIDAD"), ln=True, align="C")
     
     pdf.set_font("Arial", "", 10)
     pdf.set_text_color(0, 0, 0)
-    pdf.cell(190, 8, f"Auditor Responsable: {usuario} | Fecha de Emisión: {date.today()}", ln=True, align="C")
+    pdf.cell(190, 8, limpiar_texto(f"Auditor Responsable: {usuario} | Fecha de Emision: {date.today()}"), ln=True, align="C")
     pdf.ln(10)
     
     # KPIs
@@ -149,7 +160,7 @@ def generar_pdf(df, nps, avg, usuario):
     pdf.cell(190, 10, "1. RESUMEN ESTRATEGICO (KPIs)", ln=True)
     pdf.set_font("Arial", "", 12)
     pdf.cell(95, 10, f"Net Promoter Score (NPS): {nps:.1f}%")
-    pdf.cell(95, 10, f"Indice de Satisfaccion: {avg:.1f}%", ln=True)
+    pdf.cell(95, 10, limpiar_texto(f"Indice de Satisfaccion: {avg:.1f}%"), ln=True)
     pdf.ln(5)
 
     # Auditoria
@@ -161,10 +172,10 @@ def generar_pdf(df, nps, avg, usuario):
         pdf.set_font("Arial", "", 9)
         for _, r in fallas.iterrows():
             info = MATRIZ_ISO.get(r['Motivo'], {})
-            txt = (f"ID: {r['id']} | CIUDAD: {r['Ciudad']} | RIESGO: {info.get('riesgo','')}\n"
-                   f"NUMERAL: {info.get('numeral','')}\n"
-                   f"ACCION: {info.get('solucion','')}\n"
-                   f"RESPONSABLE: {info.get('responsable','')} | SLA: {info.get('sla','')}\n")
+            txt = (f"ID: {r['id']} | CIUDAD: {limpiar_texto(r['Ciudad'])} | RIESGO: {limpiar_texto(info.get('riesgo',''))}\n"
+                   f"NUMERAL: {limpiar_texto(info.get('numeral',''))}\n"
+                   f"ACCION: {limpiar_texto(info.get('solucion',''))}\n"
+                   f"RESPONSABLE: {limpiar_texto(info.get('responsable',''))} | SLA: {info.get('sla','')}\n")
             pdf.multi_cell(0, 5, txt)
             pdf.ln(3)
             
@@ -173,9 +184,10 @@ def generar_pdf(df, nps, avg, usuario):
     pdf.cell(190, 10, "3. CONCLUSION EJECUTIVA", ln=True)
     pdf.set_font("Arial", "I", 10)
     conclusion = "Operacion estable" if nps > 50 else "Se requiere intervencion inmediata en procesos de calidad."
-    pdf.multi_cell(0, 8, f"Basado en los datos analizados: {conclusion}")
+    pdf.multi_cell(0, 8, limpiar_texto(f"Basado en los datos analizados: {conclusion}"))
     
-    return pdf.output(dest="S").encode("latin-1")
+    # Retornamos el PDF codificado correctamente
+    return pdf.output(dest="S").encode("latin-1", errors="replace")
 
 # ================================
 # SIDEBAR (GESTIÓN Y REGISTRO)
@@ -316,8 +328,11 @@ with tab2:
    st.subheader("📑 Auditoría ISO 9001:2015 - Inteligencia de Riesgo")
    
    if PDF_OK:
-       pdf_file = generar_pdf(df_f, nps, avg_sat, st.session_state.usuario)
-       st.download_button("📥 Descargar Reporte Ejecutivo PDF", pdf_file, f"TQ_Executive_Report_{date.today()}.pdf")
+       try:
+           pdf_file = generar_pdf(df_f, nps, avg_sat, st.session_state.usuario)
+           st.download_button("📥 Descargar Reporte Ejecutivo PDF", pdf_file, f"TQ_Executive_Report_{date.today()}.pdf")
+       except Exception as e:
+           st.error(f"Error al generar PDF: {e}")
 
    if not df_f.empty:
        st.markdown("---")
