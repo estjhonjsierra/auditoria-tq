@@ -274,10 +274,20 @@ with tab1:
     if not df.empty:
         col_del1, col_del2 = st.columns([1,3])
         id_borrar = col_del1.number_input("ID a borrar", min_value=0, step=1)
-        # TEXTO ACTUALIZADO AQUÍ ABAJO
+        
+        # LÓGICA DE ELIMINACIÓN CORREGIDA PARA QUE FUNCIONE SIEMPRE
         if col_del2.button("⚠️ ELIMINAR REGISTRO HISTÓRICO"):
-            conn = sqlite3.connect(DB); conn.execute("DELETE FROM auditoria WHERE id = ?", (id_borrar,)); conn.commit(); conn.close()
-            st.cache_data.clear(); st.success(f"ID {id_borrar} eliminado"); st.rerun()
+            if id_borrar > 0:
+                conn = sqlite3.connect(DB)
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM auditoria WHERE id = ?", (id_borrar,))
+                conn.commit()
+                conn.close()
+                st.cache_data.clear()
+                st.success(f"✅ Registro {id_borrar} eliminado correctamente")
+                st.rerun()
+            else:
+                st.error("Seleccione un ID válido")
         
         edit = st.data_editor(df, use_container_width=True, key="editor_historico")
         if st.button("🔄 Sincronizar"):
