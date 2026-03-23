@@ -4,145 +4,162 @@ import numpy as np
 from datetime import date, timedelta
 
 # ==========================================
-# 1. CONFIGURACIÓN DE ALTO NIVEL
+# 1. CONFIGURACIÓN Y ESTILO
 # ==========================================
-st.set_page_config(page_title="TQ Auditoría - Control de Calidad ISO", layout="wide")
+st.set_page_config(page_title="TQ Auditoría ISO 9001", layout="wide")
 
-# Estilo profesional para métricas y fondo
 st.markdown("""
     <style>
-    [data-testid="stMetricValue"] { font-size: 28px; font-weight: bold; color: #003366; }
-    .stApp { background-color: #f4f7f9; }
+    [data-testid="stMetricValue"] { font-size: 28px; font-weight: bold; color: #004aad; }
+    .stApp { background-color: #ffffff; }
     div[data-testid="metric-container"] {
-        background-color: white;
+        background-color: #f8f9fa;
         padding: 20px;
         border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border: 1px solid #e1e4e8;
+        border: 1px solid #dee2e6;
     }
     </style>
     """, unsafe_allow_html=True)
 
-COLUMNAS = [
-    'Fecha', 'Nombre', 'Ciudad', 'Region', 'Canal', 
-    'Satisfaccion', 'Reclamos', 'Motivo PQRS', 'Observaciones'
-]
+# Listas de Selección
+CIUDADES_COL = ["Cali", "Bogotá", "Medellín", "Barranquilla", "Cartagena", "Bucaramanga", "Pereira", "Manizales", "Cúcuta", "Ibagué", "Santa Marta", "Neiva", "Villavicencio", "Pasto", "Tunja", "Armenia", "Popayán", "Sincelejo", "Valledupar", "Montería", "Quibdó", "Riohacha"]
+REGIONES = ["Antioquia", "Bogotá D.C.", "Valle del Cauca", "Costa Caribe", "Santanderes", "Eje Cafetero", "Pacífico", "Llanos Orientales"]
+CANALES = ["Ventas Directas", "Mercadeo", "Digital", "Comunicación Directa", "Distribuidor"]
+
+COLUMNAS = ['Fecha', 'Nombre', 'Ciudad', 'Region', 'Canal', 'Satisfaccion', 'Reclamos', 'Motivo PQRS', 'Observaciones']
 
 # ==========================================
-# 2. GESTIÓN DE MEMORIA (DATA CORE)
+# 2. INTELIGENCIA ISO 9001 (NUMERALES)
+# ==========================================
+SOLUCIONES_ISO = {
+    "1. Calidad": {"numeral": "Numeral 8.7 (Control de salidas no conformes)", "accion": "Segregar producto, aplicar cuarentena y análisis de lote en laboratorio."},
+    "2. Precios": {"numeral": "Numeral 8.2.1 (Comunicación con el cliente)", "accion": "Auditoría de facturación y revisión de listas de precios vigentes."},
+    "3. Logística": {"numeral": "Numeral 8.4 (Control de procesos externos/Suministros)", "accion": "Revaluar proveedor logístico y optimizar tiempos de entrega (OTIF)."},
+    "4. Agotados": {"numeral": "Numeral 8.1 (Planificación y control operacional)", "accion": "Revisar pronósticos de demanda y ajustar stock de seguridad."},
+    "5. Atención": {"numeral": "Numeral 7.2 (Competencia)", "accion": "Programa de capacitación en protocolos de servicio y trazabilidad."},
+    "10. Otro": {"numeral": "Numeral 10.2 (No conformidad y acción correctiva)", "accion": "Realizar análisis de causa raíz mediante 5 Porqués o Ishikawa."}
+}
+
+# ==========================================
+# 3. GESTIÓN DE DATOS
 # ==========================================
 if 'db' not in st.session_state:
-    seeds = [
-        [str(date.today()), "Farmacia Central", "Cali", "Valle", "Ventas", 85, 0, "Ninguna (0 PQRS)", "Todo OK"],
-        [str(date.today() - timedelta(days=1)), "Droguería XYZ", "Medellín", "Antioquia", "Digital", 40, 3, "3. Logística", "Retraso entrega"]
-    ]
-    st.session_state.db = pd.DataFrame(seeds, columns=COLUMNAS)
+    st.session_state.db = pd.DataFrame(columns=COLUMNAS)
 
 # ==========================================
-# 3. SIDEBAR: PANEL DE CONTROL TÉCNICO
+# 4. SIDEBAR (ENTRADA DE DATOS)
 # ==========================================
-# Logo TQ limpio
-st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Tecnoqu%C3%ADmicas_logo.svg/1200px-Tecnoqu%C3%ADmicas_logo.svg.png", width=180)
-st.sidebar.title("📥 Registro de Auditoría")
+# Quitamos la imagen molesta y dejamos solo el título limpio
+st.sidebar.title("🛠️ Registro de Auditoría TQ")
+st.sidebar.markdown("---")
 
-with st.sidebar.form("input_form", clear_on_submit=True):
-    nombre = st.sidebar.text_input("Nombre del Cliente")
-    ciudad = st.sidebar.text_input("Ciudad / Municipio")
-    region = st.sidebar.selectbox("Región Estratégica", ["Antioquia", "Bogotá", "Valle", "Costa", "Santanderes"])
-    canal = st.sidebar.select_slider("Canal de Atención", options=["Ventas", "Mercadeo", "Digital"])
+with st.sidebar.form("formulario_registro", clear_on_submit=True):
+    nombre = st.text_input("Nombre del Cliente/Punto")
+    ciudad = st.selectbox("Ciudad / Municipio", sorted(CIUDADES_COL))
+    region = st.selectbox("Región Estratégica", REGIONES)
+    canal = st.selectbox("Canal de Atención", CANALES)
     
-    st.sidebar.markdown("---")
-    sat = st.sidebar.slider("Satisfacción (%)", 0, 100, 80)
-    reclamos = st.sidebar.number_input("Cantidad de PQRS", 0, 100, 0)
-    motivo = st.sidebar.selectbox("Categoría de Falla", ["Ninguna (0 PQRS)", "1. Calidad", "2. Precios", "3. Logística", "4. Agotados", "5. Atención"])
-    obs = st.sidebar.text_area("Notas Técnicas")
+    st.markdown("---")
+    sat = st.slider("Satisfacción (%)", 0, 100, 85)
+    reclamos = st.number_input("Cantidad PQRS", 0, 50, 0)
+    motivo = st.selectbox("Categoría de Falla", ["Ninguna (0 PQRS)", "1. Calidad", "2. Precios", "3. Logística", "4. Agotados", "5. Atención", "10. Otro"])
+    obs = st.text_area("Observaciones del Auditor")
     
-    btn_guardar = st.form_submit_button("🚀 GUARDAR REGISTRO")
+    btn_guardar = st.form_submit_button("💾 REGISTRAR EN BASE DE DATOS")
 
 if btn_guardar:
-    if nombre and ciudad:
-        nuevo_reg = pd.DataFrame([[str(date.today()), nombre, ciudad, region, canal, sat, reclamos, motivo, obs]], columns=COLUMNAS)
-        st.session_state.db = pd.concat([st.session_state.db, nuevo_reg], ignore_index=True)
-        st.toast("Guardado en Base de Datos Principal", icon="✅")
+    if nombre:
+        nuevo = pd.DataFrame([[str(date.today()), nombre, ciudad, region, canal, sat, reclamos, motivo, obs]], columns=COLUMNAS)
+        st.session_state.db = pd.concat([st.session_state.db, nuevo], ignore_index=True)
+        st.toast("Registro Exitoso", icon="✅")
     else:
-        st.sidebar.warning("⚠️ Complete Cliente y Ciudad.")
+        st.error("El nombre del cliente es obligatorio.")
 
 st.sidebar.markdown("---")
-st.sidebar.subheader("⚙️ Mantenimiento de Datos")
-
-# BOTÓN ELIMINAR ÚLTIMO (ELIMINACIÓN RÁPIDA)
 if st.sidebar.button("🗑️ Eliminar Último Registro"):
     if not st.session_state.db.empty:
-        st.session_state.db = st.session_state.db.drop(st.session_state.db.index[-1])
-        st.sidebar.error("Último registro eliminado.")
+        st.session_state.db = st.session_state.db.iloc[:-1]
         st.rerun()
 
-# DESCARGA DE DATOS
+# Botón de Descarga
 csv = st.session_state.db.to_csv(index=False).encode('utf-8')
-st.sidebar.download_button(
-    label="📥 DESCARGAR DATA MASTER (CSV)",
-    data=csv,
-    file_name=f"Data_Master_TQ_{date.today()}.csv",
-    mime="text/csv",
-)
+st.sidebar.download_button("📥 Descargar Data Master", csv, "auditoria_tq.csv", "text/csv")
 
 # ==========================================
-# 4. DASHBOARD ANALÍTICO (NIVEL BI)
+# 5. DASHBOARD (ANÁLISIS BI)
 # ==========================================
-st.title("🛡️ Sistema de Auditoría TQ - Canal Ventas")
-st.markdown("---")
+st.title("🛡️ Sistema Integral de Gestión de Calidad TQ")
 
-# --- FILTROS DE SEGMENTACIÓN ---
-f_col1, f_col2 = st.columns(2)
-with f_col1:
-    f_region = st.multiselect("📍 Filtrar por Región", options=st.session_state.db['Region'].unique(), default=st.session_state.db['Region'].unique())
-with f_col2:
-    f_canal = st.multiselect("🔄 Filtrar por Canal", options=st.session_state.db['Canal'].unique(), default=st.session_state.db['Canal'].unique())
+tab1, tab2, tab3 = st.tabs(["📊 DASHBOARD ANALÍTICO", "🗄️ TRAZABILIDAD (HISTÓRICO)", "📑 INFORME ISO 9001"])
 
-df_filtrado = st.session_state.db[(st.session_state.db['Region'].isin(f_region)) & (st.session_state.db['Canal'].isin(f_canal))]
-
-# --- KPI CARDS ---
-m1, m2, m3, m4 = st.columns(4)
-avg_sat = df_filtrado['Satisfaccion'].mean() if not df_filtrado.empty else 0
-status_color = "normal" if avg_sat > 80 else "inverse" if avg_sat < 60 else "off"
-
-m1.metric("Satisfacción Global", f"{avg_sat:.1f}%", delta=f"{avg_sat-80:.1f}% vs Meta", delta_color=status_color)
-m2.metric("Total Auditorías", len(df_filtrado))
-m3.metric("PQRS Detectadas", int(df_filtrado['Reclamos'].sum()), delta="Crítico" if df_filtrado['Reclamos'].sum() > 10 else "", delta_color="inverse")
-m4.metric("Ciudad Líder", df_filtrado['Ciudad'].mode()[0] if not df_filtrado.empty else "N/A")
-
-# --- GRÁFICAS ---
-st.markdown("### 📈 Análisis de Tendencia y Motivos")
-g1, g2 = st.columns(2)
-
-with g1:
-    st.write("**Desempeño de Satisfacción en el Tiempo**")
-    st.line_chart(df_filtrado.groupby('Fecha')['Satisfaccion'].mean())
-
-with g2:
-    st.write("**Pareto de Motivos de Falla (PQRS)**")
-    if not df_filtrado.empty:
-        motivos_count = df_filtrado[df_filtrado['Motivo PQRS'] != "Ninguna (0 PQRS)"]['Motivo PQRS'].value_counts()
-        st.bar_chart(motivos_count)
+with tab1:
+    if st.session_state.db.empty:
+        st.info("No hay datos registrados. Por favor use el panel lateral.")
     else:
-        st.info("No hay fallas registradas.")
+        # FILTROS
+        f1, f2 = st.columns(2)
+        with f1:
+            f_reg = st.multiselect("Filtrar Región", options=REGIONES, default=REGIONES)
+        with f2:
+            f_can = st.multiselect("Filtrar Canal", options=CANALES, default=CANALES)
+        
+        df_f = st.session_state.db[(st.session_state.db['Region'].isin(f_reg)) & (st.session_state.db['Canal'].isin(f_can))]
 
-# ==========================================
-# 5. GESTIÓN DE DATOS PRO (EDICIÓN Y BORRADO)
-# ==========================================
-st.markdown("---")
-st.subheader("🗄️ Trazabilidad de Auditoría (Gestión Master)")
-st.info("💡 Consejo Pro: Para eliminar una fila específica, selecciónela y presione la tecla 'Suprimir' (Delete) de su teclado.")
+        # MÉTRICAS
+        m1, m2, m3, m4 = st.columns(4)
+        avg_s = df_f['Satisfaccion'].mean() if not df_f.empty else 0
+        m1.metric("Satisfacción Promedio", f"{avg_s:.1f}%")
+        m2.metric("Total Auditorías", len(df_f))
+        m3.metric("PQRS Totales", int(df_f['Reclamos'].sum()))
+        m4.metric("Estado", "Óptimo" if avg_s > 80 else "En Alerta", delta_color="normal")
 
-edited_df = st.data_editor(
-    st.session_state.db,
-    num_rows="dynamic", 
-    use_container_width=True,
-    key="main_editor"
-)
+        # GRÁFICAS
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("**Tendencia de Calidad**")
+            st.line_chart(df_f.groupby('Fecha')['Satisfaccion'].mean())
+        with c2:
+            st.markdown("**Pareto de Fallas (PQRS)**")
+            f_fallas = df_f[df_f['Motivo PQRS'] != "Ninguna (0 PQRS)"]
+            if not f_fallas.empty:
+                st.bar_chart(f_fallas['Motivo PQRS'].value_counts())
+            else:
+                st.success("Sin fallas en este segmento")
 
-if st.button("💾 SINCRONIZAR CAMBIOS"):
-    st.session_state.db = edited_df
-    st.success("Base de Datos actualizada.")
+with tab2:
+    st.subheader("📁 Histórico de Trazabilidad")
+    st.write("Puede editar celdas directamente. Use **Ctrl+Z** para deshacer cambios antes de guardar.")
+    
+    # El editor permite borrar filas seleccionando el cuadro de la izquierda y dando 'Delete'
+    edited_db = st.data_editor(st.session_state.db, num_rows="dynamic", use_container_width=True)
+    
+    if st.button("💾 Guardar Cambios Editados"):
+        st.session_state.db = edited_db
+        st.success("Base de datos sincronizada.")
 
-st.caption("Proyecto de Innovación Digital | Auditoría de Calidad TQ 2026")
+with tab3:
+    st.subheader("📑 Dictamen Técnico de Auditoría")
+    if st.session_state.db.empty:
+        st.warning("No hay datos para generar el dictamen.")
+    else:
+        df_fallas_iso = st.session_state.db[st.session_state.db['Motivo PQRS'] != "Ninguna (0 PQRS)"]
+        
+        if not df_fallas_iso.empty:
+            principal_falla = df_fallas_iso['Motivo PQRS'].mode()[0]
+            info_iso = SOLUCIONES_ISO.get(principal_falla, {"numeral": "No especificado", "accion": "Revisión general"})
+            
+            st.error(f"### Hallazgo Crítico Detectado")
+            st.markdown(f"**Motivo más frecuente:** {principal_falla}")
+            st.markdown(f"**Referencia Normativa:** {info_iso['numeral']}")
+            
+            st.markdown("---")
+            st.info(f"#### 💡 Plan de Acción Sugerido")
+            st.write(info_iso['accion'])
+            
+            st.markdown("---")
+            st.warning("**Nota:** Este dictamen es automático basado en la recurrencia de datos.")
+        else:
+            st.success("### ✅ Dictamen: CONFORME")
+            st.write("El sistema no presenta desviaciones ni No Conformidades. Se recomienda seguir con el plan de mantenimiento preventivo.")
+
+st.caption("Tecnoquímicas S.A. | Auditoría Digital v3.0 | 2026")
