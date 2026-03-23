@@ -126,7 +126,7 @@ def load_data():
     return df
 
 # ================================
-# PDF EJECUTIVO MEJORADO (CORREGIDO)
+# PDF EJECUTIVO MEJORADO
 # ================================
 def generar_pdf(df, nps, avg, usuario):
     if not PDF_OK: return None
@@ -264,7 +264,7 @@ else:
     st.info("💡 Por favor, registre hallazgos en el SGC para activar el análisis.")
 
 # ================================
-# TABS
+# TABS (CON ELIMINACIÓN CORREGIDA)
 # ================================
 st.markdown("---")
 tab1, tab2 = st.tabs(["🛠️ Gestión de Histórico","📑 Auditoría ISO 9001 PRO"])
@@ -273,24 +273,28 @@ with tab1:
     st.subheader("⚙️ Control de Datos Históricos")
     if not df.empty:
         col_del1, col_del2 = st.columns([1,3])
-        id_borrar = col_del1.number_input("ID a borrar", min_value=0, step=1)
+        # Seleccionamos el ID
+        id_a_eliminar = col_del1.number_input("ID a borrar", min_value=1, value=1, step=1)
         
-        # LÓGICA DE ELIMINACIÓN CORREGIDA PARA QUE FUNCIONE SIEMPRE
+        # ELIMINACIÓN FORZADA Y RECARGA
         if col_del2.button("⚠️ ELIMINAR REGISTRO HISTÓRICO"):
-            if id_borrar > 0:
-                conn = sqlite3.connect(DB)
-                cursor = conn.cursor()
-                cursor.execute("DELETE FROM auditoria WHERE id = ?", (id_borrar,))
+            conn = sqlite3.connect(DB)
+            # Verificamos si existe antes de borrar
+            existe = conn.execute("SELECT id FROM auditoria WHERE id = ?", (id_a_eliminar,)).fetchone()
+            if existe:
+                conn.execute("DELETE FROM auditoria WHERE id = ?", (id_a_eliminar,))
                 conn.commit()
                 conn.close()
                 st.cache_data.clear()
-                st.success(f"✅ Registro {id_borrar} eliminado correctamente")
+                st.success(f"✅ ID {id_a_eliminar} eliminado con éxito.")
                 st.rerun()
             else:
-                st.error("Seleccione un ID válido")
-        
+                conn.close()
+                st.error(f"❌ El ID {id_a_eliminar} no existe en la base de datos.")
+
+        # Editor de datos
         edit = st.data_editor(df, use_container_width=True, key="editor_historico")
-        if st.button("🔄 Sincronizar"):
+        if st.button("🔄 Sincronizar Cambios"):
             conn = sqlite3.connect(DB)
             for _,r in edit.iterrows():
                 conn.execute("""UPDATE auditoria SET Fecha=?,Nombre=?,Contacto=?,Ciudad=?,Region=?,Canal=?,Satisfaccion=?,Reclamos=?,Motivo=?,Observaciones=? WHERE id=?""",
