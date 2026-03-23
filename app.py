@@ -5,23 +5,16 @@ import plotly.express as px
 import hashlib
 from datetime import date
 
-# ================================
-# IMPORT PDF SEGURO (NO ROMPE APP)
-# ================================
+# PDF seguro
 try:
     from fpdf import FPDF
     PDF_OK = True
 except:
     PDF_OK = False
 
-# ================================
-# CONFIG
-# ================================
 st.set_page_config(page_title="TQ BI Enterprise v16.3", layout="wide")
 
-# ================================
-# SEGURIDAD
-# ================================
+# ================= SEGURIDAD =================
 def hash_pass(p):
     return hashlib.sha256(p.strip().encode()).hexdigest()
 
@@ -33,32 +26,25 @@ def check_password():
         password = st.text_input("Contraseña", type="password")
 
         if st.button("Ingresar"):
-
             usuarios_db = {
                 "admin": {"pass": hash_pass("tq2026"), "role": "Administrador"},
                 "jhonmarin": {"pass": hash_pass("Jhonmarin31."), "role": "Auditor Senior"}
             }
 
-            user = user.strip()
-            password_hash = hash_pass(password)
-
-            if user in usuarios_db and password_hash == usuarios_db[user]["pass"]:
+            if user.strip() in usuarios_db and hash_pass(password) == usuarios_db[user.strip()]["pass"]:
                 st.session_state["password_correct"] = True
                 st.session_state["usuario"] = user
-                st.session_state["rol"] = usuarios_db[user]["role"]
+                st.session_state["rol"] = usuarios_db[user.strip()]["role"]
                 st.rerun()
             else:
                 st.error("❌ Credenciales inválidas")
-
         return False
     return True
 
 if not check_password():
     st.stop()
 
-# ================================
-# BASE DE DATOS
-# ================================
+# ================= DB =================
 DB = "tq_pro.db"
 
 def init_db():
@@ -85,50 +71,36 @@ def load_data():
         df["Fecha"] = pd.to_datetime(df["Fecha"]).dt.date
     return df
 
-# ================================
-# PDF
-# ================================
+# ================= PDF =================
 def generar_pdf(df, nps, avg, usuario):
     if not PDF_OK:
         return None
 
     pdf = FPDF()
     pdf.add_page()
-
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(190, 10, "TECNOQUIMICAS S.A - INFORME ESTRATEGICO", ln=True, align="C")
-
-    pdf.set_font("Arial", "", 10)
-    pdf.cell(190, 8, f"Usuario: {usuario} | Fecha: {date.today()}", ln=True)
+    pdf.set_font("Arial","B",16)
+    pdf.cell(190,10,"INFORME TQ",ln=True,align="C")
+    pdf.set_font("Arial","",10)
+    pdf.cell(190,8,f"{usuario} - {date.today()}",ln=True)
 
     pdf.ln(5)
+    pdf.cell(190,8,f"NPS: {nps:.1f}",ln=True)
+    pdf.cell(190,8,f"Satisfaccion: {avg:.1f}%",ln=True)
 
-    pdf.cell(190, 8, f"NPS: {nps:.1f}", ln=True)
-    pdf.cell(190, 8, f"Satisfaccion: {avg:.1f}%", ln=True)
-
+    fallas = df[df["Motivo"]!="Ninguna"]
     pdf.ln(5)
-
-    fallas = df[df["Motivo"] != "Ninguna"] if not df.empty else pd.DataFrame()
 
     if not fallas.empty:
-        for _, r in fallas.iterrows():
-            txt = f"{r['Ciudad']} - {r['Motivo']} - {str(r['Observaciones'])[:120]}"
-            pdf.multi_cell(0, 6, txt)
+        for _,r in fallas.iterrows():
+            pdf.multi_cell(0,6,f"{r['Ciudad']} - {r['Motivo']} - {str(r['Observaciones'])[:100]}")
     else:
-        pdf.cell(190, 8, "Sin hallazgos", ln=True)
+        pdf.cell(190,8,"Sin fallas",ln=True)
 
     return pdf.output(dest="S").encode("latin-1")
 
-# ================================
-# SIDEBAR
-# ================================
+# ================= SIDEBAR =================
 st.sidebar.title("🏢 TQ BI PRO")
 st.sidebar.write(f"👤 {st.session_state.usuario}")
-st.sidebar.write(f"Rol: {st.session_state.rol}")
-
-if st.sidebar.button("Cerrar sesión"):
-    st.session_state.clear()
-    st.rerun()
 
 CIUDADES = sorted([
     "Leticia","Medellín","Arauca","Barranquilla","Cartagena","Tunja","Manizales",
@@ -139,13 +111,14 @@ CIUDADES = sorted([
     "Bello","Soledad","Buenaventura","Palmira","Tuluá","Ipiales","Barrancabermeja"
 ])
 
-REGIONES = ["Amazonía","Andina","Caribe","Insular","Orinoquía","Pacífica"]
+# 🔥 REGIONES REALES (CAMBIO)
+REGIONES = ["Antioquia","Bogotá","Valle del Cauca","Atlántico","Santander","Cundinamarca","Bolívar","Nariño"]
 
 with st.sidebar.form("form"):
     nombre = st.text_input("Nombre")
     contacto = st.text_input("Contacto")
     ciudad = st.selectbox("Ciudad", CIUDADES)
-    region = st.selectbox("Región", REGIONES)
+    region = st.selectbox("Zona", REGIONES)
     canal = st.selectbox("Canal", ["Ventas","Digital","Farma","Institucional"])
     sat = st.slider("Satisfacción",0,100,80)
     pqrs = st.number_input("Reclamos",0,100,0)
@@ -158,100 +131,80 @@ with st.sidebar.form("form"):
                      (str(date.today()),nombre,contacto,ciudad,region,canal,sat,pqrs,motivo,obs))
         conn.commit()
         conn.close()
-        st.cache_data.clear()
-        st.success("Registro guardado")
+        st.success("Guardado")
         st.rerun()
 
-# ================================
-# DASHBOARD
-# ================================
-st.title("📊 Dashboard TQ Calidad")
+    # 🔴 BORRAR TODO
+    if st.form_submit_button("🗑️ Borrar Todo"):
+        conn = sqlite3.connect(DB)
+        conn.execute("DELETE FROM auditoria")
+        conn.commit()
+        conn.close()
+        st.success("Base eliminada")
+        st.rerun()
+
+# ================= DASHBOARD =================
+st.title("📊 Dashboard TQ")
 
 df = load_data()
 
-# Filtros SIEMPRE visibles
 f1,f2 = st.columns(2)
-reg_sel = f1.multiselect("Filtrar Región", REGIONES, default=REGIONES)
-can_sel = f2.multiselect("Filtrar Canal", ["Ventas","Digital","Farma","Institucional"], default=["Ventas","Digital","Farma","Institucional"])
+reg_sel = f1.multiselect("Zona", REGIONES, default=REGIONES)
+can_sel = f2.multiselect("Canal", ["Ventas","Digital","Farma","Institucional"], default=["Ventas","Digital","Farma","Institucional"])
 
 df_f = df[(df["Region"].isin(reg_sel)) & (df["Canal"].isin(can_sel))] if not df.empty else pd.DataFrame()
 
-# Variables seguras (NO MÁS ERRORES)
 nps = 0
 avg_sat = 0
 
 if not df_f.empty:
-
     prom = len(df_f[df_f["Satisfaccion"]>=90])
     detr = len(df_f[df_f["Satisfaccion"]<70])
-
     nps = ((prom-detr)/len(df_f))*100
     avg_sat = df_f["Satisfaccion"].mean()
 
-    k1,k2,k3,k4 = st.columns(4)
-    k1.metric("NPS", f"{nps:.1f}")
-    k2.metric("Satisfacción", f"{avg_sat:.1f}%")
-    k3.metric("PQRS", int(df_f["Reclamos"].sum()))
-    k4.metric("Tasa Falla", f"{(df_f['Reclamos'].sum()/len(df_f)):.2f}")
+    st.metric("NPS",f"{nps:.1f}")
+    st.metric("Satisfacción",f"{avg_sat:.1f}%")
 
-    # 🔥 GRÁFICO NIVEL DIOS
-    fig = px.bar(
-        df_f.groupby("Region")["Satisfaccion"].mean().reset_index(),
-        x="Region",
-        y="Satisfaccion",
-        color="Satisfaccion",
-        color_continuous_scale="RdYlGn",
-        text_auto=".2f",
-        title="Nivel de Satisfacción por Región"
-    )
+    st.plotly_chart(px.bar(df_f,x="Region",y="Satisfaccion"))
 
-    fig.update_layout(
-        title_x=0.5,
-        xaxis_title="Región",
-        yaxis_title="Satisfacción (%)"
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-else:
-    st.info("No hay datos registrados aún.")
-
-# ================================
-# TABS
-# ================================
-st.markdown("---")
-tab1,tab2 = st.tabs(["🛠️ Gestión","📑 ISO 9001"])
+# ================= TABS =================
+tab1,tab2 = st.tabs(["Gestión","ISO"])
 
 with tab1:
     if not df.empty:
-        edit = st.data_editor(df, use_container_width=True)
-        if st.button("Actualizar"):
-            conn = sqlite3.connect(DB)
-            for _,r in edit.iterrows():
-                conn.execute("""UPDATE auditoria SET Fecha=?,Nombre=?,Contacto=?,Ciudad=?,Region=?,Canal=?,Satisfaccion=?,Reclamos=?,Motivo=?,Observaciones=? WHERE id=?""",
-                             (str(r["Fecha"]),r["Nombre"],r["Contacto"],r["Ciudad"],r["Region"],r["Canal"],r["Satisfaccion"],r["Reclamos"],r["Motivo"],r["Observaciones"],r["id"]))
-            conn.commit()
-            conn.close()
-            st.success("Base de datos actualizada")
-            st.rerun()
-    else:
-        st.write("Sin datos para gestionar")
+        for i,row in df.iterrows():
+            col1,col2 = st.columns([4,1])
+            col1.write(row.to_dict())
+
+            # 🔴 BORRAR INDIVIDUAL
+            if col2.button("🗑️", key=row["id"]):
+                conn = sqlite3.connect(DB)
+                conn.execute("DELETE FROM auditoria WHERE id=?", (row["id"],))
+                conn.commit()
+                conn.close()
+                st.rerun()
 
 with tab2:
-    st.subheader("Auditoría ISO 9001")
+    st.subheader("ISO 9001 PRO")
 
     if PDF_OK:
-        pdf = generar_pdf(df_f, nps, avg_sat, st.session_state.usuario)
-        st.download_button("📥 Descargar Informe PDF", pdf, "Reporte_TQ.pdf")
-    else:
-        st.warning("⚠️ Instala 'fpdf' en requirements.txt")
+        pdf = generar_pdf(df_f,nps,avg_sat,st.session_state.usuario)
+        st.download_button("PDF",pdf)
+
+    # 🔥 MATRIZ ISO REAL
+    acciones = {
+        "Calidad":"Aplicar control de producto no conforme (ISO 9001:2015 8.7), análisis causa raíz y plan de acción.",
+        "Precios":"Revisión de política comercial y transparencia (8.2.1 comunicación con cliente).",
+        "Logística":"Evaluar proveedores externos y tiempos de entrega (8.4 control externo).",
+        "Agotados":"Planificación de inventarios y demanda (8.1 control operacional).",
+        "Atención":"Capacitación del personal y mejora en servicio (7.2 competencia)."
+    }
 
     if not df_f.empty:
         fallas = df_f[df_f["Motivo"]!="Ninguna"]
-        if not fallas.empty:
-            for f,c in fallas["Motivo"].value_counts().items():
-                st.warning(f"{f}: {c} casos")
-        else:
-            st.success("Sin hallazgos ISO")
+        for f,c in fallas["Motivo"].value_counts().items():
+            st.error(f"{f} ({c} casos)")
+            st.info(acciones.get(f,"Acción general ISO"))
 
-st.caption("TQ BI Enterprise v16.3 FINAL 🚀")
+st.caption("TQ BI NIVEL DIOS 🚀")
