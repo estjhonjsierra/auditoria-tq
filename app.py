@@ -21,50 +21,50 @@ st.set_page_config(page_title="TQ BI Enterprise v17.5 Platinum", layout="wide", 
 
 # 📊 MATRIZ TÉCNICA ISO 9001 AMPLIADA (Nivel Profesional)
 MATRIZ_ISO = {
-    "Calidad": {
-        "numeral": "8.7 Control de las salidas no conformes",
-        "hallazgo": "Desviación en los estándares técnicos del producto o empaque.",
-        "solucion": "Bloqueo inmediato de lote, análisis de causa raíz (Ishikawa) y disposición final.",
-        "riesgo": "ALTO 🔴",
-        "causa": "Falla en control de procesos productivos o materias primas.",
-        "responsable": "Gerente de Calidad / Planta",
-        "sla": "24 Horas"
+   "Calidad": {
+       "numeral": "8.7 Control de las salidas no conformes",
+       "hallazgo": "Desviación en los estándares técnicos del producto o empaque.",
+       "solucion": "Bloqueo inmediato de lote, análisis de causa raíz (Ishikawa) y disposición final.",
+       "riesgo": "ALTO 🔴",
+       "causa": "Falla en control de procesos productivos o materias primas.",
+       "responsable": "Gerente de Calidad / Planta",
+       "sla": "24 Horas"
     },
-    "Precios": {
-        "numeral": "8.2.1 Comunicación con el cliente",
-        "hallazgo": "Inconsistencia entre precio facturado y precio exhibido.",
-        "solucion": "Auditoría de lista de precios en SAP y actualización de POP.",
-        "riesgo": "MEDIO 🟡",
-        "causa": "Desincronización de bases de datos comerciales.",
-        "responsable": "Director Comercial / Facturación",
-        "sla": "48 Horas"
+   "Precios": {
+       "numeral": "8.2.1 Comunicación con el cliente",
+       "hallazgo": "Inconsistencia entre precio facturado y precio exhibido.",
+       "solucion": "Auditoría de lista de precios en SAP y actualización de POP.",
+       "riesgo": "MEDIO 🟡",
+       "causa": "Desincronización de bases de datos comerciales.",
+       "responsable": "Director Comercial / Facturación",
+       "sla": "48 Horas"
     },
-    "Logística": {
-        "numeral": "8.4 Control de procesos externos",
-        "hallazgo": "Incumplimiento en tiempos de entrega o averías.",
-        "solucion": "Re-evaluación del transportador y optimización de ruta.",
-        "riesgo": "ALTO 🔴",
-        "causa": "Falla en la cadena de suministros o transporte tercero.",
-        "responsable": "Jefe de Logística / Distribución",
-        "sla": "72 Horas"
+   "Logística": {
+       "numeral": "8.4 Control de procesos externos",
+       "hallazgo": "Incumplimiento en tiempos de entrega o averías.",
+       "solucion": "Re-evaluación del transportador y optimización de ruta.",
+       "riesgo": "ALTO 🔴",
+       "causa": "Falla en la cadena de suministros o transporte tercero.",
+       "responsable": "Jefe de Logística / Distribución",
+       "sla": "72 Horas"
     },
-    "Agotados": {
-        "numeral": "8.1 Planificación y control operacional",
-        "hallazgo": "Ruptura de stock que afecta la continuidad.",
-        "solucion": "Ajuste de pronóstico de demanda y aceleración de reposición.",
-        "riesgo": "ALTO 🔴",
-        "causa": "Error en proyección de demanda o retraso de proveedores.",
-        "responsable": "Gerente de Compras / Planeación",
-        "sla": "48 Horas"
+   "Agotados": {
+       "numeral": "8.1 Planificación y control operacional",
+       "hallazgo": "Ruptura de stock que afecta la continuidad.",
+       "solucion": "Ajuste de pronóstico de demanda y aceleración de reposición.",
+       "riesgo": "ALTO 🔴",
+       "causa": "Error en proyección de demanda o retraso de proveedores.",
+       "responsable": "Gerente de Compras / Planeación",
+       "sla": "48 Horas"
     },
-    "Atención": {
-        "numeral": "7.2 Competencia",
-        "hallazgo": "Falta de conocimiento técnico del personal.",
-        "solucion": "Plan de re-entrenamiento en Universidad TQ.",
-        "riesgo": "BAJO 🟢",
-        "causa": "Brecha de capacitación en nuevos protocolos.",
-        "responsable": "Gestión Humana / Capacitación",
-        "sla": "1 Semana"
+   "Atención": {
+       "numeral": "7.2 Competencia",
+       "hallazgo": "Falta de conocimiento técnico del personal.",
+       "solucion": "Plan de re-entrenamiento en Universidad TQ.",
+       "riesgo": "BAJO 🟢",
+       "causa": "Brecha de capacitación en nuevos protocolos.",
+       "responsable": "Gestión Humana / Capacitación",
+       "sla": "1 Semana"
     }
 }
 
@@ -81,7 +81,9 @@ def check_password():
             user = st.text_input("Usuario")
             password = st.text_input("Contraseña", type="password")
             if st.button("Ingresar Sistema Platinum"):
+                # CREDENCIALES CORREGIDAS SEGÚN TU SOLICITUD
                 usuarios_db = {
+                    "equipotq": {"pass": hash_pass("tqcalidad2024"), "role": "Equipo Auditor"},
                     "admin": {"pass": hash_pass("tq2026"), "role": "Administrador"},
                     "jhonmarin": {"pass": hash_pass("Jhonmarin31."), "role": "Auditor Senior"}
                 }
@@ -184,7 +186,7 @@ st.sidebar.markdown(f"**Rol:** `{st.session_state.rol}`")
 st.sidebar.markdown("---")
 
 CIUDADES = sorted([
-    "Leticia","Medellín","Arauca","Barranquilla","Cartagena","Tunja","Manizales","Florencia","Yopal","Popayán","Valledupar","Quibdó","Montería","Bogotá","Inírida","San José del Guaviare","Neiva","Riohacha","Santa Marta","Villavicencio","Pasto","Cúcuta","Mocoa","Armenia","Pereira","San Andrés","Bucaramanga","Sincelejo","Ibagué","Cali","Mitú","Puerto Carreño","Soacha","Bello","Soledad","Buenaventura","Palmira","Tuluá","Ipiales","Barrancabermeja"
+   "Leticia","Medellín","Arauca","Barranquilla","Cartagena","Tunja","Manizales","Florencia","Yopal","Popayán","Valledupar","Quibdó","Montería","Bogotá","Inírida","San José del Guaviare","Neiva","Riohacha","Santa Marta","Villavicencio","Pasto","Cúcuta","Mocoa","Armenia","Pereira","San Andrés","Bucaramanga","Sincelejo","Ibagué","Cali","Mitú","Puerto Carreño","Soacha","Bello","Soledad","Buenaventura","Palmira","Tuluá","Ipiales","Barrancabermeja"
 ])
 
 ZONAS = ["Antioquia", "Valle y Cauca", "Centro (Bogotá/Boyacá)", "Costa Norte", "Santanderes", "Eje Cafetero", "Sur (Huila/Nariño)", "Llanos/Amazonía"]
@@ -211,7 +213,6 @@ with st.sidebar.form("form"):
 st.sidebar.markdown("---")
 st.sidebar.subheader("🗑️ Zona de Peligro")
 
-# Confirmación de borrado último
 if st.sidebar.button("🗑️ Borrar Último"):
     st.sidebar.warning("¿Está seguro? Esta acción es irreversible.")
     if st.sidebar.button("Confirmar Borrado Último"):
@@ -231,7 +232,6 @@ st.markdown("---")
 
 df = load_data()
 
-# Filtros Ejecutivos
 with st.container():
     f1, f2 = st.columns(2)
     zona_sel = f1.multiselect("📍 Zona Operativa", ZONAS, default=ZONAS)
@@ -242,19 +242,16 @@ df_f = df[(df["Region"].isin(zona_sel)) & (df["Canal"].isin(can_sel))] if not df
 nps, avg_sat = 0, 0
 
 if not df_f.empty:
-    # LÓGICA DE ALERTAS INTELIGENTES
     prom = len(df_f[df_f["Satisfaccion"]>=90])
     detr = len(df_f[df_f["Satisfaccion"]<70])
     nps = ((prom-detr)/len(df_f))*100
     avg_sat = df_f["Satisfaccion"].mean()
     total_pqrs = int(df_f["Reclamos"].sum())
 
-    # Contenedor de Alertas
     if nps < 50: st.error(f"🔴 **ALERTA CRÍTICA NPS:** El índice actual ({nps:.1f}%) está por debajo del umbral corporativo.")
     if avg_sat < 70: st.warning(f"🟡 **ALERTA SATISFACCIÓN:** La media de satisfacción ({avg_sat:.1f}%) requiere atención inmediata.")
     if total_pqrs > 10: st.error(f"🚨 **RIESGO OPERATIVO:** Alto volumen de reclamos detectado ({total_pqrs} PQRS).")
 
-    # MÉTRICAS WOW
     st.markdown("### 📈 Indicadores Clave de Gestión")
     k1, k2, k3, k4 = st.columns(4)
     k1.metric("Loyalty NPS", f"{nps:.1f}%", delta=f"{nps-50:.1f}% vs Goal")
@@ -262,7 +259,6 @@ if not df_f.empty:
     k3.metric("Total Reclamos", total_pqrs)
     k4.metric("Tasa de Falla", f"{(total_pqrs/len(df_f)):.2f}")
 
-    # GRÁFICO EJECUTIVO
     st.markdown("---")
     col_chart1, col_chart2 = st.columns([2, 1])
     
@@ -310,39 +306,38 @@ with tab1:
             conn = sqlite3.connect(DB)
             for _,r in edit.iterrows():
                 conn.execute("""UPDATE auditoria SET Fecha=?,Nombre=?,Contacto=?,Ciudad=?,Region=?,Canal=?,Satisfaccion=?,Reclamos=?,Motivo=?,Observaciones=? WHERE id=?""",
-                             (str(r["Fecha"]),r["Nombre"],r["Contacto"],r["Ciudad"],r["Region"],r["Canal"],r["Satisfaccion"],r["Reclamos"],r["Motivo"],r["Observaciones"],r["id"]))
+                            (str(r["Fecha"]),r["Nombre"],r["Contacto"],r["Ciudad"],r["Region"],r["Canal"],r["Satisfaccion"],r["Reclamos"],r["Motivo"],r["Observaciones"],r["id"]))
             conn.commit(); conn.close()
             st.success("✅ Base de Datos Sincronizada"); st.rerun()
     else:
         st.write("Esperando datos para mostrar historial...")
 
 with tab2:
-    st.subheader("📑 Auditoría ISO 9001:2015 - Inteligencia de Riesgo")
-    
-    if PDF_OK:
-        pdf_file = generar_pdf(df_f, nps, avg_sat, st.session_state.usuario)
-        st.download_button("📥 Descargar Reporte Ejecutivo PDF", pdf_file, f"TQ_Executive_Report_{date.today()}.pdf")
+   st.subheader("📑 Auditoría ISO 9001:2015 - Inteligencia de Riesgo")
+   
+   if PDF_OK:
+       pdf_file = generar_pdf(df_f, nps, avg_sat, st.session_state.usuario)
+       st.download_button("📥 Descargar Reporte Ejecutivo PDF", pdf_file, f"TQ_Executive_Report_{date.today()}.pdf")
 
-    if not df_f.empty:
-        st.markdown("---")
-        fallas = df_f[df_f["Motivo"]!="Ninguna"]
-        if not fallas.empty:
-            # Highlight mayor problema
-            top_falla = fallas["Motivo"].value_counts().idxmax()
-            st.error(f"📌 **HALLAZGO CRÍTICO:** La falla más recurrente es **{top_falla}**.")
+   if not df_f.empty:
+       st.markdown("---")
+       fallas = df_f[df_f["Motivo"]!="Ninguna"]
+       if not fallas.empty:
+           top_falla = fallas["Motivo"].value_counts().idxmax()
+           st.error(f"📌 **HALLAZGO CRÍTICO:** La falla más recurrente es **{top_falla}**.")
 
-            for f, c in fallas["Motivo"].value_counts().items():
-                info = MATRIZ_ISO.get(f, {})
-                with st.expander(f"📌 {f.upper()} | {c} Incidentes | Riesgo: {info.get('riesgo')}"):
-                    c_iso1, c_iso2 = st.columns(2)
-                    with c_iso1:
-                        st.markdown(f"**🔍 Causa Raíz Sugerida:**\n{info.get('causa')}")
-                        st.markdown(f"**⚖️ Numeral ISO:**\n{info.get('numeral')}")
-                    with c_iso2:
+           for f, c in fallas["Motivo"].value_counts().items():
+               info = MATRIZ_ISO.get(f, {})
+               with st.expander(f"📌 {f.upper()} | {c} Incidentes | Riesgo: {info.get('riesgo')}"):
+                   c_iso1, c_iso2 = st.columns(2)
+                   with c_iso1:
+                       st.markdown(f"**🔍 Causa Raíz Sugerida:**\n{info.get('causa')}")
+                       st.markdown(f"**⚖️ Numeral ISO:**\n{info.get('numeral')}")
+                   with c_iso2:
                         st.markdown(f"**👤 Responsable:**\n{info.get('responsable')}")
                         st.markdown(f"**⏱️ SLA de Solución:**\n{info.get('sla')}")
-                    st.info(f"**🎯 Acción Correctiva Proyectada:**\n{info.get('solucion')}")
-        else:
-            st.success("✅ **CUMPLIMIENTO TOTAL:** La operación cumple con el 100% de los estándares ISO en el filtro seleccionado.")
+                   st.info(f"**🎯 Acción Correctiva Proyectada:**\n{info.get('solucion')}")
+       else:
+           st.success("✅ **CUMPLIMIENTO TOTAL:** La operación cumple con el 100% de los estándares ISO en el filtro seleccionado.")
 
 st.caption(f"TQ BI Enterprise v17.5 Platinum | © {date.today().year} Tecnoquímicas S.A. | Auditoría Senior")
