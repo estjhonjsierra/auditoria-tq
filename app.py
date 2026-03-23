@@ -27,7 +27,7 @@ def check_password():
         if st.button("Ingresar"):
             usuarios_db = {
                 "admin": {"pass": hash_pass("tq2026"), "role": "Administrador"},
-                "jhonmarin": {"pass": hash_pass("Jhonmarin31"), "role": "Auditor Senior"}
+                "jhonmarin": {"pass": hash_pass("Jhonmarin31."), "role": "Auditor"}
             }
 
             if user in usuarios_db and hash_pass(password) == usuarios_db[user]["pass"]:
@@ -81,13 +81,14 @@ def load_data():
 init_db()
 
 # ==========================================
-# 3. CIUDADES DINÁMICAS
+# 3. CIUDADES (MEJORA NINJA 🔥)
 # ==========================================
-try:
-    ciudades_df = pd.read_csv("ciudades_colombia.csv")
-    CIUDADES = ciudades_df["ciudad"].unique()
-except:
-    CIUDADES = ["Bogotá", "Medellín", "Cali", "Barranquilla"]
+ciudades_principales = sorted([
+    "Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena", "Cúcuta", 
+    "Bucaramanga", "Pereira", "Santa Marta", "Ibagué", "Pasto", "Manizales", 
+    "Neiva", "Villavicencio", "Armenia", "Montería", "Valledupar", 
+    "Buenaventura", "Quibdó", "Riohacha"
+])
 
 REGIONES = ["Andina", "Caribe", "Pacífica", "Orinoquía", "Amazonía"]
 
@@ -106,7 +107,10 @@ if st.sidebar.button("🚪 Cerrar sesión"):
 with st.sidebar.form("form"):
     nombre = st.text_input("Nombre")
     contacto = st.text_input("Contacto")
-    ciudad = st.selectbox("Ciudad", CIUDADES)
+    
+    # ✅ AQUÍ ESTÁ TU MEJORA
+    ciudad = st.selectbox("Ciudad", ciudades_principales)
+    
     region = st.selectbox("Región", REGIONES)
     canal = st.selectbox("Canal", ["Ventas", "Digital", "Farma"])
     sat = st.slider("Satisfacción", 0, 100, 80)
@@ -141,7 +145,9 @@ else:
 
     df_f = df[(df["Region"].isin(reg)) & (df["Canal"].isin(can))]
 
+    # ✅ MEJORA INDESTRUCTIBLE
     if not df_f.empty:
+
         prom = len(df_f[df_f["Satisfaccion"]>=90])
         detr = len(df_f[df_f["Satisfaccion"]<70])
         nps = ((prom-detr)/len(df_f))*100 if len(df_f)>0 else 0
@@ -157,8 +163,13 @@ else:
             top = df_f.groupby("Region")["Reclamos"].sum().idxmax()
             st.error(f"Zona crítica: {top}")
 
-        st.plotly_chart(px.bar(df_f.groupby("Region")["Satisfaccion"].mean().reset_index(),
-                               x="Region",y="Satisfaccion",color="Satisfaccion"))
+        st.plotly_chart(px.bar(
+            df_f.groupby("Region")["Satisfaccion"].mean().reset_index(),
+            x="Region",y="Satisfaccion",color="Satisfaccion"
+        ))
+
+    else:
+        st.warning("No hay datos para los filtros seleccionados.")
 
 # ==========================================
 # 6. CRUD
@@ -188,7 +199,7 @@ with tab1:
         st.rerun()
 
 # ==========================================
-# 7. ISO + RESUMEN EJECUTIVO
+# 7. ISO
 # ==========================================
 with tab2:
     st.subheader("📑 Análisis ISO Inteligente")
@@ -208,11 +219,7 @@ with tab2:
             "Atención": "Capacitación"
         }
 
-        total_fallas = 0
-
         for falla,cantidad in conteo.items():
-
-            total_fallas += cantidad
 
             if cantidad > 20:
                 prioridad = "🔴 ALTA"
@@ -228,24 +235,4 @@ with tab2:
             - Acción: {SOL.get(falla,"Análisis")}
             """)
 
-        # 🔥 NUEVO: RESUMEN EJECUTIVO
-        st.markdown("---")
-        if st.button("📄 Generar Resumen Ejecutivo"):
-            top_falla = conteo.idxmax()
-
-            st.success(f"""
-            🧠 **RESUMEN EJECUTIVO DE AUDITORÍA**
-
-            - Total de fallas detectadas: {total_fallas}
-            - Principal no conformidad: {top_falla}
-            - Nivel de riesgo: {'ALTO' if total_fallas > 20 else 'MEDIO'}
-
-            📌 **Recomendación estratégica:**
-            Priorizar acciones correctivas sobre {top_falla} y ejecutar plan de mejora continua (PHVA).
-
-            📊 **Conclusión:**
-            Se requiere intervención para garantizar cumplimiento ISO 9001 y mejorar la experiencia del cliente.
-            """)
-
-# ==========================================
 st.caption("TQ BI PRO v14 | Nivel Empresa Real 🚀")
