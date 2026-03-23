@@ -221,7 +221,6 @@ with st.sidebar.form("form"):
     nombre = st.text_input("Punto / Cliente")
     contacto = st.text_input("Contacto")
     ciudad = st.selectbox("Ciudad", CIUDADES)
-    # ⚠️ El input manual de Zona se eliminó, ahora se asigna automáticamente al guardar
     canal = st.selectbox("Canal", ["Ventas","Digital","Farma","Institucional"])
     sat = st.slider("Satisfacción (%)", 0, 100, 80)
     pqrs = st.number_input("Reclamos", 0, 100, 0)
@@ -300,10 +299,20 @@ if not df_f.empty:
     with col_chart2:
         st.markdown("#### 🚦 Semáforo de Calidad")
         for z in zona_sel:
-            sat_z = df_f[df_f["Region"]==z]["Satisfaccion"].mean()
-            if sat_z >= 85: st.success(f"🟢 {z}: {sat_z:.1f}%")
-            elif sat_z >= 70: st.warning(f"🟡 {z}: {sat_z:.1f}%")
-            else: st.error(f"🔴 {z}: {sat_z:.1f}%")
+            # 1. Filtramos datos solo por la zona en ciclo
+            df_zona = df_f[df_f["Region"]==z]
+            
+            # 2. SOLO mostramos el semáforo si hay datos (quita el error visual de nan%)
+            if not df_zona.empty:
+                sat_z = df_zona["Satisfaccion"].mean()
+                
+                # 3. VINCULACIÓN DE CIUDADES: Extraemos las ciudades reales evaluadas en esa zona
+                ciudades = ", ".join(df_zona["Ciudad"].unique())
+                
+                # Se renderiza el texto combinando Zona + (Ciudades Vinculadas)
+                if sat_z >= 85: st.success(f"🟢 {z} ({ciudades}): {sat_z:.1f}%")
+                elif sat_z >= 70: st.warning(f"🟡 {z} ({ciudades}): {sat_z:.1f}%")
+                else: st.error(f"🔴 {z} ({ciudades}): {sat_z:.1f}%")
 
 else:
     st.info("💡 Bienvenido. No hay datos en el filtro actual. Por favor, registre hallazgos en el panel lateral.")
@@ -320,12 +329,11 @@ with tab1:
         with st.expander("🗑️ Herramientas de Eliminación"):
             col_del1, col_del2 = st.columns([1,3])
             
-            # FIX: Usar selectbox con los IDs reales para evitar borrar IDs inexistentes
             ids_disponibles = df["id"].tolist() if not df.empty else []
             id_borrar = col_del1.selectbox("ID del Registro", options=ids_disponibles)
             
             if col_del2.button("⚠️ ELIMINAR REGISTRO POR ID"):
-                if ids_disponibles: # Validar que sí haya registros para borrar
+                if ids_disponibles:
                     conn = sqlite3.connect(DB)
                     conn.execute(f"DELETE FROM auditoria WHERE id = {id_borrar}")
                     conn.commit(); conn.close()
