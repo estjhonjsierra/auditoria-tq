@@ -1,42 +1,46 @@
 import streamlit as st
 import pandas as pd              
 import os
-import sqlite3 # Base de datos real
+import sqlite3 
 import numpy as np
 from datetime import date, timedelta
 
 # ==========================================
-# 1. SEGURIDAD Y GESTIÓN DE SESIÓN (PRO)
+# 1. SEGURIDAD PRO: ROLES Y SESIÓN
 # ==========================================
 def check_password():
     def password_entered():
-        # En producción real, esto se lee de st.secrets
-        usuarios_db = st.secrets.get("passwords", {"admin": "tq2026", "jhon.marin": "auditoria2026"})
-        if st.session_state["username"] in usuarios_db and \
-           st.session_state["password"] == usuarios_db[st.session_state["username"]]:
+        # Diccionario de usuarios con ROLES (Admin vs Auditor)
+        usuarios_db = {
+            "admin": {"pass": "tq2026", "role": "Administrador"},
+            "jhon.marin": {"pass": "auditoria2026", "role": "Auditor Senior"}
+        }
+        
+        user = st.session_state["username"]
+        password = st.session_state["password"]
+        
+        if user in usuarios_db and password == usuarios_db[user]["pass"]:
             st.session_state["password_correct"] = True
-            del st.session_state["password"]
+            st.session_state["user_role"] = usuarios_db[user]["role"]
+            del st.session_state["password"] 
         else:
             st.session_state["password_correct"] = False
 
     if "password_correct" not in st.session_state:
-        st.title("🔐 TQ Enterprise: Login Seguro")
+        st.title("🔐 TQ Enterprise: Business Intelligence")
         st.text_input("Usuario Corporativo", key="username")
         st.text_input("Contraseña", type="password", key="password")
-        st.button("Acceder al Sistema", on_click=password_entered)
+        st.button("Acceder al Ecosistema", on_click=password_entered)
         return False
     elif not st.session_state["password_correct"]:
-        st.text_input("Usuario Corporativo", key="username")
-        st.text_input("Contraseña", type="password", key="password")
-        st.button("Acceder al Sistema", on_click=password_entered)
-        st.error("❌ Credenciales inválidas.")
+        st.error("❌ Credenciales inválidas. Acceso denegado.")
         return False
     return True
 
 # ==========================================
-# 2. MOTOR DE BASE DE DATOS (SQLITE - NIVEL PRO)
+# 2. MOTOR SQLITE CON CACHÉ (RENDIMIENTO ⚡)
 # ==========================================
-DB_SQL = "tq_audit_pro.db"
+DB_SQL = "tq_audit_final_v9.db"
 
 def init_db():
     conn = sqlite3.connect(DB_SQL)
@@ -48,13 +52,13 @@ def init_db():
     conn.commit()
     conn.close()
 
+@st.cache_data(ttl=600) # CACHÉ DE 10 MINUTOS (OPTIMIZACIÓN REAL)
 def cargar_datos_sql():
     conn = sqlite3.connect(DB_SQL)
     df = pd.read_sql_query("SELECT * FROM auditoria", conn)
     conn.close()
     if not df.empty:
         df['Fecha'] = pd.to_datetime(df['Fecha']).dt.date
-    # Mapeo de nombres para mantener compatibilidad con el código
     df.columns = ['Fecha', 'Nombre Consumidor', 'Contacto', 'Ciudad Residencia', 'Region', 'Canal', 'Satisfaccion', 'Reclamos', 'Motivo PQRS', 'Observaciones']
     return df
 
@@ -64,137 +68,129 @@ def guardar_dato_sql(datos):
     c.execute("INSERT INTO auditoria VALUES (?,?,?,?,?,?,?,?,?,?)", datos)
     conn.commit()
     conn.close()
+    st.cache_data.clear() # Limpiar caché para ver el dato nuevo
 
-# Iniciar DB
 init_db()
 
-st.set_page_config(page_title="Plan de Mejora TQ v8.0", layout="wide")
+st.set_page_config(page_title="TQ BI v9.0 - Plan de Mejora", layout="wide")
 
 if not check_password():
     st.stop()
 
 # ==========================================
-# 3. SESIÓN Y DICCIONARIO ISO
-# ==========================================
-if 'db' not in st.session_state:
-    st.session_state.db = cargar_datos_sql()
-
-DICCIONARIO_ISO = {
-    "1. Calidad": {"numeral": "8.7 (Salidas No Conformes)", "plan": "Segregación inmediata y análisis de lote."},
-    "2. Precios": {"numeral": "8.2.1 (Comunicación)", "plan": "Auditoría de precios y ajuste en CRM."},
-    "3. Logística": {"numeral": "8.4 (Suministros)", "plan": "Evaluación OTIF de transportadores."},
-    "4. Agotados": {"numeral": "8.1 (Operación)", "plan": "Ajuste de stock de seguridad."},
-    "5. Atención": {"numeral": "7.2 (Competencia)", "plan": "Capacitación en protocolos TQ."},
-    "10. Otro": {"numeral": "10.2 (Acción Correctiva)", "plan": "Análisis Causa Raíz."}
-}
-
-# ==========================================
-# 4. SIDEBAR: CARGA Y CONTROL
+# 3. SIDEBAR: REGISTRO Y CERRAR SESIÓN
 # ==========================================
 st.sidebar.title("🏢 Tecnoquímicas S.A.")
-if st.sidebar.button("🚪 Cerrar Sesión"):
+st.sidebar.markdown(f"**Usuario:** {st.session_state.username}")
+st.sidebar.markdown(f"**Rol:** {st.session_state.user_role}")
+
+if st.sidebar.button("🚪 Cerrar Sesión Segura"):
     st.session_state.clear()
     st.rerun()
 
-with st.sidebar.form("form_v8", clear_on_submit=True):
-    st.subheader("📝 Registro Auditoría")
+with st.sidebar.form("form_v9", clear_on_submit=True):
+    st.subheader("📝 Registro de Hallazgos")
     nombre = st.text_input("Nombre Consumidor")
     contacto = st.text_input("Contacto")
-    ciudad_res = st.selectbox("Ciudad Residencia", ["Cali", "Bogotá", "Medellín", "Barranquilla", "Pereira"])
-    region_sel = st.selectbox("Región", ["Antioquia", "Bogotá D.C.", "Valle del Cauca", "Costa Caribe", "Eje Cafetero"])
+    ciudad_res = st.selectbox("Ciudad Residencia", ["Cali", "Bogotá", "Medellín", "Barranquilla", "Pereira", "Manizales"])
+    region_sel = st.selectbox("Región", ["Antioquia", "Bogotá D.C.", "Valle del Cauca", "Costa Caribe", "Eje Cafetero", "Santanderes"])
     canal_sel = st.selectbox("Canal", ["Ventas Directas", "Mercadeo", "Digital", "Comunicación Directa"])
-    sat_val = st.slider("Satisfacción (%)", 0, 100, 85)
+    sat_val = st.slider("Nivel Satisfacción (%)", 0, 100, 80)
     pqrs_val = st.number_input("Cantidad PQRS", 0, 100, 0)
-    motivo_sel = st.selectbox("Falla ISO", ["Ninguna (0 PQRS)"] + list(DICCIONARIO_ISO.keys()))
-    obs_txt = st.text_area("Observaciones")
+    motivo_sel = st.selectbox("Clasificación ISO", ["Ninguna (0 PQRS)", "1. Calidad", "2. Precios", "3. Logística", "4. Agotados", "5. Atención", "10. Otro"])
+    obs_txt = st.text_area("Observaciones del Auditor")
     
-    if st.form_submit_button("🚀 GUARDAR EN SQL"):
+    if st.form_submit_button("💾 GUARDAR AUDITORÍA"):
         if nombre and contacto:
             fila = (str(date.today()), nombre, contacto, ciudad_res, region_sel, canal_sel, sat_val, pqrs_val, motivo_sel, obs_txt)
             guardar_dato_sql(fila)
-            st.session_state.db = cargar_datos_sql()
-            st.sidebar.success("✅ Guardado en Base de Datos SQL")
+            st.sidebar.success("✅ Almacenado en SQL")
             st.rerun()
 
-# VALIDACIÓN DE BORRADO
-if st.sidebar.button("🗑️ Eliminar Último Registro"):
-    if not st.session_state.db.empty:
+# VALIDACIÓN DE BORRADO (SOLO PARA ADMIN)
+if st.session_state.user_role == "Administrador":
+    if st.sidebar.button("🗑️ Eliminar Último Registro"):
         conn = sqlite3.connect(DB_SQL)
         conn.execute("DELETE FROM auditoria WHERE rowid = (SELECT MAX(rowid) FROM auditoria)")
         conn.commit()
         conn.close()
-        st.session_state.db = cargar_datos_sql()
+        st.cache_data.clear()
         st.rerun()
 
 # ==========================================
-# 5. DASHBOARD: BI DE ALTO NIVEL (WOW INSIGHTS)
+# 4. DASHBOARD: ANALÍTICA WOW & IMPACTO
 # ==========================================
-st.title("📊 TQ Intelligence Pro: Dashboard Ejecutivo")
+st.title("📊 TQ Intelligence: Plan de Mejora Continua")
+db_actual = cargar_datos_sql()
 
-if not st.session_state.db.empty:
-    # FILTROS
-    f_reg = st.multiselect("📍 Regiones", st.session_state.db['Region'].unique(), default=st.session_state.db['Region'].unique())
-    df_f = st.session_state.db[st.session_state.db['Region'].isin(f_reg)]
+if not db_actual.empty:
+    f_reg = st.multiselect("📍 Segmentación Regional", db_actual['Region'].unique(), default=db_actual['Region'].unique())
+    df_f = db_actual[db_actual['Region'].isin(f_reg)]
 
-    # --- 🧠 INSIGHTS "WOW" (NUEVO) ---
-    st.subheader("💡 Business Insights Automáticos")
-    c_wow1, c_wow2, c_wow3 = st.columns(3)
+    # --- 🧠 INSIGHTS WOW (PROTEGIDOS CONTRA VACÍOS) ---
+    st.subheader("💡 Insights de Impacto Estratégico")
     
-    with c_wow1:
-        # INSIGHT DE CONCENTRACIÓN (WOW)
-        total_pqrs_global = st.session_state.db['Reclamos'].sum()
-        if total_pqrs_global > 0:
-            pqrs_por_region = st.session_state.db.groupby('Region')['Reclamos'].sum()
-            max_reg = pqrs_por_region.idxmax()
-            porcentaje_critico = (pqrs_por_region.max() / total_pqrs_global) * 100
-            st.error(f"⚠️ **Concentración PQRS:** La región **{max_reg}** concentra el **{porcentaje_critico:.1f}%** de las fallas nacionales.")
-    
-    with c_wow2:
-        # INSIGHT DE CANAL
-        peor_canal = df_f.groupby('Canal')['Satisfaccion'].mean().idxmin()
-        st.warning(f"🚩 **Alerta de Canal:** El canal **{peor_canal}** requiere intervención inmediata (Baja Satisfacción).")
+    if not df_f.empty: # VALIDACIÓN DE VACÍOS (ANTI-CRASH)
+        c_i1, c_i2, c_i3 = st.columns(3)
+        
+        with c_i1:
+            # INSIGHT 1: CONCENTRACIÓN
+            total_pqrs = db_actual['Reclamos'].sum()
+            if total_pqrs > 0:
+                critico = df_f.groupby('Region')['Reclamos'].sum().idxmax()
+                porc = (df_f.groupby('Region')['Reclamos'].sum().max() / total_pqrs) * 100
+                st.error(f"⚠️ **Fuga de Calidad:** {critico} concentra el **{porc:.1f}%** de PQRS.")
+        
+        with c_i2:
+            # INSIGHT 2: IMPACTO FINANCIERO (NUEVO WOW)
+            # Clientes con satisfacción < 60% que tienen reclamos
+            riesgo_ch = df_f[(df_f['Satisfaccion'] < 60) & (df_f['Reclamos'] > 0)]
+            porc_riesgo = (len(riesgo_ch) / len(df_f)) * 100 if len(df_f) > 0 else 0
+            st.warning(f"📉 **Impacto Financiero:** El **{porc_riesgo:.1f}%** de clientes están en riesgo crítico de abandono.")
 
-    with c_wow3:
-        # VARIACIÓN SEMANAL
-        hace_7 = date.today() - timedelta(days=7)
-        reciente = df_f[df_f['Fecha'] >= hace_7]['Satisfaccion'].mean()
-        if not np.isnan(reciente):
-            st.info(f"📈 **Tendencia 7D:** La satisfacción semanal se sitúa en **{reciente:.1f}%**.")
+        with c_i3:
+            # INSIGHT 3: PEOR CANAL
+            peor_c = df_f.groupby('Canal')['Satisfaccion'].mean().idxmin()
+            st.info(f"🔄 **Canal Crítico:** El canal **{peor_c}** requiere rediseño de procesos.")
 
     # --- MÉTRICAS Y GRÁFICAS ---
+    st.markdown("---")
     m1, m2, m3 = st.columns(3)
-    m1.metric("Satisfacción Promedio", f"{df_f['Satisfaccion'].mean():.1f}%")
-    m2.metric("Total Auditorías", len(df_f))
-    m3.metric("PQRS en Segmento", int(df_f['Reclamos'].sum()))
+    if not df_f.empty:
+        m1.metric("Satisfacción Promedio", f"{df_f['Satisfaccion'].mean():.1f}%")
+        m2.metric("Auditorías", len(df_f))
+        m3.metric("PQRS Registradas", int(df_f['Reclamos'].sum()))
 
     g1, g2 = st.columns(2)
     with g1:
-        st.write("**🏆 Top Ciudades de Residencia (Satisfacción)**")
+        st.write("**🏆 Top Ciudades (Satisfacción)**")
         # CORRECCIÓN DE BUG: 'Ciudad Residencia'
-        top_ciudades = df_f.groupby('Ciudad Residencia')['Satisfaccion'].mean().sort_values(ascending=False).head(5)
-        st.bar_chart(top_ciudades)
-
+        if not df_f.empty:
+            chart_data = df_f.groupby('Ciudad Residencia')['Satisfaccion'].mean().sort_values(ascending=False).head(5)
+            st.bar_chart(chart_data)
+            
     with g2:
-        st.write("**📈 Línea de Tiempo de Calidad**")
-        df_ev = df_f.groupby('Fecha')['Satisfaccion'].mean().sort_index()
-        st.line_chart(df_ev)
+        st.write("**📈 Histórico de Calidad**")
+        if not df_f.empty:
+            df_ev = df_f.groupby('Fecha')['Satisfaccion'].mean().sort_index()
+            st.line_chart(df_ev)
 
 # ==========================================
-# 6. TRAZABILIDAD E ISO
+# 5. TRAZABILIDAD E ISO
 # ==========================================
-tab1, tab2 = st.tabs(["🗄️ Trazabilidad SQL", "📑 Plan de Mejora ISO"])
+st.markdown("---")
+tab1, tab2 = st.tabs(["🗄️ Trazabilidad de Auditoría", "📑 Plan ISO 9001"])
 
 with tab1:
-    st.write("Datos extraídos de motor SQLite (Seguro para Producción)")
-    st.dataframe(st.session_state.db, use_container_width=True)
+    st.subheader("Base de Datos Maestra (SQL)")
+    st.dataframe(db_actual, use_container_width=True)
 
 with tab2:
-    st.subheader("Reporte de No Conformidades")
-    df_iso = st.session_state.db[st.session_state.db['Motivo PQRS'] != "Ninguna (0 PQRS)"]
-    if not df_iso.empty:
-        falla = df_iso['Motivo PQRS'].mode()[0]
-        plan = DICCIONARIO_ISO.get(falla)
-        st.error(f"**Hallazgo Principal:** {falla}")
-        st.info(f"**Plan ISO 9001:** {plan['plan']} (Ref: {plan['numeral']})")
+    st.subheader("Numerales ISO y Planes de Acción")
+    df_err = db_actual[db_actual['Motivo PQRS'] != "Ninguna (0 PQRS)"]
+    if not df_err.empty:
+        top_f = df_err['Motivo PQRS'].mode()[0]
+        st.error(f"🚩 **Hallazgo Recurrente:** {top_f}")
+        st.markdown(f"**Plan Sugerido:** Revisión inmediata del proceso bajo norma ISO 9001:2015.")
 
-st.caption(f"Tecnoquímicas S.A. | BI Pro v8.0 | Motor SQL Activo")
+st.caption(f"Tecnoquímicas S.A. | Auditoría BI Gold v9.0 | {date.today()}")
