@@ -326,7 +326,6 @@ with st.sidebar.form("form"):
     sat = st.slider("Satisfacción (%)", 0, 100, 80)
     pqrs = st.number_input("Reclamos", 0, 100, 0)
     
-    # === AQUI SE ACTUALIZARON LOS MOTIVOS EN EL SELECTBOX ===
     motivo = st.selectbox("Motivo No Conformidad", [
         "Ninguna", "Producto Vencido", "Empaque Dañado", "Agotado en Góndola", 
         "Agotado en PDV", "Precio Incorrecto", "Falta Marcación Precio", 
@@ -338,7 +337,7 @@ with st.sidebar.form("form"):
     obs = st.text_area("Observaciones Técnicas")
 
     if st.form_submit_button("💾 Guardar en Base de Datos"):
-        zona_automatica = MAPEO_CIUDAD_ZONA[ciudad] # Asignación matemática directa
+        zona_automatica = MAPEO_CIUDAD_ZONA[ciudad] 
         conn = sqlite3.connect(DB)
         conn.execute("INSERT INTO auditoria VALUES (NULL,?,?,?,?,?,?,?,?,?,?)",
                      (str(date.today()), nombre, contacto, ciudad, zona_automatica, canal, sat, pqrs, motivo, obs))
@@ -382,17 +381,21 @@ if not df_f.empty:
     nps = ((prom-detr)/len(df_f))*100
     avg_sat = df_f["Satisfaccion"].mean()
     total_pqrs = int(df_f["Reclamos"].sum())
+    # === MEJORA: CÁLCULO DE CUMPLIMIENTO ISO ===
+    cumplimiento_iso = (len(df_f[df_f["Motivo"] == "Ninguna"]) / len(df_f)) * 100
 
     if nps < 50: st.error(f"🔴 **ALERTA CRÍTICA NPS:** El índice actual ({nps:.1f}%) está por debajo del umbral corporativo.")
     if avg_sat < 70: st.warning(f"🟡 **ALERTA SATISFACCIÓN:** La media de satisfacción ({avg_sat:.1f}%) requiere atención inmediata.")
     if total_pqrs > 10: st.error(f"🚨 **RIESGO OPERATIVO:** Alto volumen de reclamos detectado ({total_pqrs} PQRS).")
 
     st.markdown("### 📈 Indicadores Clave de Gestión")
-    k1, k2, k3, k4 = st.columns(4)
+    # === MEJORA: AÑADIDA COLUMNA 5 PARA CUMPLIMIENTO ISO ===
+    k1, k2, k3, k4, k5 = st.columns(5)
     k1.metric("Loyalty NPS", f"{nps:.1f}%", delta=f"{nps-50:.1f}% vs Goal")
     k2.metric("Customer Sat", f"{avg_sat:.1f}%")
     k3.metric("Total Reclamos", total_pqrs)
     k4.metric("Tasa de Falla", f"{(total_pqrs/len(df_f)):.2f}")
+    k5.metric("Cumplimiento ISO", f"{cumplimiento_iso:.1f}%")
 
     st.markdown("---")
     col_chart1, col_chart2 = st.columns([2, 1])
@@ -409,20 +412,20 @@ if not df_f.empty:
     with col_chart2:
         st.markdown("#### 🚦 Semáforo de Calidad")
         for z in zona_sel:
-            # 1. Filtramos datos solo por la zona en ciclo
             df_zona = df_f[df_f["Region"]==z]
-            
-            # 2. SOLO mostramos el semáforo si hay datos (quita el error visual de nan%)
             if not df_zona.empty:
                 sat_z = df_zona["Satisfaccion"].mean()
-                
-                # 3. VINCULACIÓN DE CIUDADES: Extraemos las ciudades reales evaluadas en esa zona
                 ciudades = ", ".join(df_zona["Ciudad"].unique())
-                
-                # Se renderiza el texto combinando Zona + (Ciudades Vinculadas)
                 if sat_z >= 85: st.success(f"🟢 {z} ({ciudades}): {sat_z:.1f}%")
                 elif sat_z >= 70: st.warning(f"🟡 {z} ({ciudades}): {sat_z:.1f}%")
                 else: st.error(f"🔴 {z} ({ciudades}): {sat_z:.1f}%")
+
+    # === MEJORA: GRÁFICA DE TENDENCIA AÑADIDA DEBAJO ===
+    st.markdown("---")
+    st.markdown("#### 📉 Evolución de Satisfacción en el Tiempo")
+    df_trend = df_f.groupby("Fecha")["Satisfaccion"].mean().reset_index()
+    fig_line = px.line(df_trend, x="Fecha", y="Satisfaccion", markers=True, title="Tendencia Histórica de Satisfacción")
+    st.plotly_chart(fig_line, use_container_width=True)
 
 else:
     st.info("💡 Bienvenido. No hay datos en el filtro actual. Por favor, registre hallazgos en el panel lateral.")
@@ -454,7 +457,6 @@ with tab1:
         st.markdown("#### Tabla Maestra de Auditoría")
         edit = st.data_editor(df, use_container_width=True)
         
-        # === BOTÓN DE EXPORTAR EXCEL AÑADIDO AQUÍ ===
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
             if st.button("🔄 Sincronizar Cambios"):
@@ -492,6 +494,16 @@ with tab2:
        if not fallas.empty:
            top_falla = fallas["Motivo"].value_counts().idxmax()
            st.error(f"📌 **HALLAZGO CRÍTICO:** La falla más recurrente es **{top_falla}**.")
+           
+           # === MEJORA: INSIGHTS AUTOMÁTICOS AÑADIDOS ===
+           if top_falla == "Producto Vencido":
+               st.error("🚨 Riesgo sanitario y legal ALTO. Se requiere retiro de lote inmediato.")
+           elif top_falla == "Precio Incorrecto":
+               st.warning("⚠️ Riesgo de Peticiones y Quejas (PQRS). Actualizar flejes urgente en el PDV.")
+           elif top_falla == "Agotado en PDV" or top_falla == "Agotado en Góndola":
+               st.warning("📉 Riesgo de pérdida de ventas. Revisar inventarios y cadena de suministro.")
+           else:
+               st.info(f"💡 Sugerencia Ejecutiva: Planificar una capacitación rápida enfocada en evitar: {top_falla}.")
 
            for f, c in fallas["Motivo"].value_counts().items():
                info = MATRIZ_ISO.get(f, {})
