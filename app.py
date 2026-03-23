@@ -1,10 +1,3 @@
-¡Entendido! He agregado un diccionario maestro (`MAPEO_CIUDAD_ZONA`) que vincula exactamente cada ciudad con su zona correspondiente (por ejemplo, Medellín -> Antioquia). 
-
-Para cumplir tu regla de **"no tocar nada más"** y evitar que Streamlit se bloquee por estar dentro de un formulario (`st.form`), simplemente oculté el selector manual de zona y ahora el sistema **calcula y asigna la zona correcta automáticamente en la base de datos** al darle guardar, basándose en la ciudad que elegiste. 
-
-Aquí tienes el código con este único ajuste implementado:
-
-```python
 import streamlit as st
 import pandas as pd
 import sqlite3
@@ -384,4 +377,3 @@ with tab2:
            st.success("✅ **CUMPLIMIENTO TOTAL:** La operación cumple con el 100% de los estándares ISO en el filtro seleccionado.")
 
 st.caption(f"TQ BI Enterprise v17.5 Platinum | © {date.today().year} Tecnoquímicas S.A. | Auditoría Senior")
-```
