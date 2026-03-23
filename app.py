@@ -19,7 +19,7 @@ except:
 # ================================
 st.set_page_config(page_title="SGC TQ - Gestión de Auditoría", layout="wide", page_icon="💊")
 
-# 📊 MATRIZ TÉCNICA ISO 9001 AMPLIADA (Nivel Profesional)
+# 📊 MATRIZ TÉCNICA ISO 9001 AMPLIADA
 MATRIZ_ISO = {
     "Calidad": {
         "numeral": "8.7 Control de las salidas no conformes",
@@ -69,7 +69,7 @@ MATRIZ_ISO = {
 }
 
 # ================================
-# SEGURIDAD (ACCESO EQUIPO AUDITOR)
+# SEGURIDAD
 # ================================
 def hash_pass(p):
     return hashlib.sha256(p.strip().encode()).hexdigest()
@@ -81,16 +81,14 @@ def check_password():
             user = st.text_input("Usuario (Equipo Auditor)")
             password = st.text_input("Contraseña Corporativa", type="password")
             if st.button("Ingresar al Sistema"):
-                usuarios_db = {
-                    "equipotq": {"pass": hash_pass("tqcalidad2024"), "role": "Equipo Auditor"}
-                }
+                usuarios_db = {"equipotq": {"pass": hash_pass("tqcalidad2024"), "role": "Equipo Auditor"}}
                 if user.strip() in usuarios_db and hash_pass(password) == usuarios_db[user.strip()]["pass"]:
                     st.session_state["password_correct"] = True
                     st.session_state["usuario"] = user
                     st.session_state["rol"] = usuarios_db[user]["role"]
                     st.rerun()
                 else:
-                    st.error("❌ Acceso denegado. Verifique usuario y contraseña.")
+                    st.error("❌ Acceso denegado.")
         return False
     return True
 
@@ -126,64 +124,10 @@ def load_data():
     return df
 
 # ================================
-# PDF EJECUTIVO MEJORADO
-# ================================
-def generar_pdf(df, nps, avg, usuario):
-    if not PDF_OK: return None
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", "B", 18)
-    pdf.set_text_color(0, 51, 102)
-    pdf.cell(190, 15, "SGC TQ - INFORME ESTRATEGICO DE AUDITORIA", ln=True, align="C")
-    
-    pdf.set_font("Arial", "", 10)
-    pdf.set_text_color(0, 0, 0)
-    pdf.cell(190, 8, f"Auditor Responsable: {usuario} | Fecha de Emision: {date.today()}", ln=True, align="C")
-    pdf.ln(10)
-    
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(190, 10, "1. RESUMEN ESTRATEGICO (KPIs)", ln=True)
-    pdf.set_font("Arial", "", 12)
-    pdf.cell(95, 10, f"Net Promoter Score (NPS): {nps:.1f}%")
-    pdf.cell(95, 10, f"Indice de Satisfaccion: {avg:.1f}%", ln=True)
-    pdf.ln(5)
-
-    fallas = df[df["Motivo"] != "Ninguna"]
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(190, 10, "2. ANALISIS DE NO CONFORMIDADES ISO 9001", ln=True)
-    
-    if not fallas.empty:
-        pdf.set_font("Arial", "", 9)
-        for _, r in fallas.iterrows():
-            info = MATRIZ_ISO.get(r['Motivo'], {})
-            txt = (f"ID: {r['id']} | CIUDAD: {r['Ciudad']} | RIESGO: {info.get('riesgo','')}\n"
-                   f"NUMERAL: {info.get('numeral','')}\n"
-                   f"ACCION: {info.get('solucion','')}\n"
-                   f"RESPONSABLE: {info.get('responsable','')} | SLA: {info.get('sla','')}\n")
-            pdf.multi_cell(0, 5, txt.encode('latin-1', 'replace').decode('latin-1'))
-            pdf.ln(3)
-            
-    pdf.ln(10)
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(190, 10, "3. CONCLUSION EJECUTIVA", ln=True)
-    pdf.set_font("Arial", "I", 10)
-    conclusion = "Operacion estable" if nps > 50 else "Se requiere intervencion inmediata en procesos de calidad."
-    pdf.multi_cell(0, 8, f"Basado en los datos analizados: {conclusion}")
-    
-    return pdf.output(dest="S").encode("latin-1", "ignore")
-
-# ================================
 # SIDEBAR
 # ================================
 st.sidebar.title("💊 SGC TECNOQUÍMICAS")
-st.sidebar.markdown(f"**Usuario Activo:** `{st.session_state.usuario}`")
-st.sidebar.markdown(f"**Rol:** `{st.session_state.rol}`")
-st.sidebar.markdown("---")
-
-CIUDADES = sorted([
-    "Leticia","Medellín","Arauca","Barranquilla","Cartagena","Tunja","Manizales","Florencia","Yopal","Popayán","Valledupar","Quibdó","Montería","Bogotá","Inírida","San José del Guaviare","Neiva","Riohacha","Santa Marta","Villavicencio","Pasto","Cúcuta","Mocoa","Armenia","Pereira","San Andrés","Bucaramanga","Sincelejo","Ibagué","Cali","Mitú","Puerto Carreño","Soacha","Bello","Soledad","Buenaventura","Palmira","Tuluá","Ipiales","Barrancabermeja"
-])
-
+CIUDADES = sorted(["Leticia","Medellín","Barranquilla","Cartagena","Tunja","Manizales","Popayán","Valledupar","Montería","Bogotá","Neiva","Santa Marta","Villavicencio","Pasto","Cúcuta","Armenia","Pereira","Bucaramanga","Sincelejo","Ibagué","Cali","Soacha","Buenaventura","Palmira","Tuluá","Barrancabermeja"])
 ZONAS = ["Antioquia", "Valle y Cauca", "Centro (Bogotá/Boyacá)", "Costa Norte", "Santanderes", "Eje Cafetero", "Sur (Huila/Nariño)", "Llanos/Amazonía"]
 
 with st.sidebar.form("form"):
@@ -205,66 +149,37 @@ with st.sidebar.form("form"):
         conn.commit(); conn.close()
         st.cache_data.clear(); st.success("✅ Registro almacenado"); st.rerun()
 
-st.sidebar.markdown("---")
-if st.sidebar.button("🗑️ Borrar Último"):
-    conn = sqlite3.connect(DB)
-    conn.execute("DELETE FROM auditoria WHERE id = (SELECT MAX(id) FROM auditoria)")
-    conn.commit(); conn.close()
-    st.cache_data.clear(); st.warning("Registro eliminado"); st.rerun()
-
 if st.sidebar.button("🚪 Cerrar Sesión"):
     st.session_state.clear(); st.rerun()
 
 # ================================
 # DASHBOARD
 # ================================
-st.title("💊 SGC TQ - Dashboard de Inteligencia de Calidad")
-st.markdown("---")
-
+st.title("💊 SGC TQ - Dashboard de Inteligencia")
 df = load_data()
 
-with st.container():
+if not df.empty:
     f1, f2 = st.columns(2)
-    zona_sel = f1.multiselect("📍 Zona Operativa", ZONAS, default=ZONAS)
-    can_sel = f2.multiselect("📦 Canal de Distribución", ["Ventas","Digital","Farma","Institucional"], default=["Ventas","Digital","Farma","Institucional"])
+    zona_sel = f1.multiselect("📍 Zona", ZONAS, default=ZONAS)
+    can_sel = f2.multiselect("📦 Canal", ["Ventas","Digital","Farma","Institucional"], default=["Ventas","Digital","Farma","Institucional"])
+    df_f = df[(df["Region"].isin(zona_sel)) & (df["Canal"].isin(can_sel))]
 
-df_f = df[(df["Region"].isin(zona_sel)) & (df["Canal"].isin(can_sel))] if not df.empty else pd.DataFrame()
-
-nps, avg_sat = 0, 0
-
-if not df_f.empty:
-    prom = len(df_f[df_f["Satisfaccion"]>=90]); detr = len(df_f[df_f["Satisfaccion"]<70])
-    nps = ((prom-detr)/len(df_f))*100
-    avg_sat = df_f["Satisfaccion"].mean()
-    total_pqrs = int(df_f["Reclamos"].sum())
-
-    if nps < 50: st.error(f"🔴 **ALERTA CRÍTICA NPS:** {nps:.1f}%")
-    if avg_sat < 70: st.warning(f"🟡 **ALERTA SATISFACCIÓN:** {avg_sat:.1f}%")
-
-    st.markdown("### 📈 Indicadores Estratégicos")
-    k1, k2, k3, k4 = st.columns(4)
-    k1.metric("Loyalty NPS", f"{nps:.1f}%")
-    k2.metric("Indice Satisfacción", f"{avg_sat:.1f}%")
-    k3.metric("Total Reclamos", total_pqrs)
-    k4.metric("Tasa Falla", f"{(total_pqrs/len(df_f)):.2f}")
-
-    col_chart1, col_chart2 = st.columns([2, 1])
-    with col_chart1:
-        fig = px.bar(df_f.groupby("Region")["Satisfaccion"].mean().reset_index().sort_values("Satisfaccion", ascending=False),
-                     x="Region", y="Satisfaccion", color="Satisfaccion", color_continuous_scale="RdYlGn", text_auto=".1f", title="🎯 Ranking por Zona Operativa")
+    if not df_f.empty:
+        prom = len(df_f[df_f["Satisfaccion"]>=90]); detr = len(df_f[df_f["Satisfaccion"]<70])
+        nps = ((prom-detr)/len(df_f))*100
+        avg_sat = df_f["Satisfaccion"].mean()
+        
+        st.markdown("### 📈 Indicadores Clave")
+        k1, k2, k3 = st.columns(3)
+        k1.metric("Loyalty NPS", f"{nps:.1f}%")
+        k2.metric("Indice Satisfacción", f"{avg_sat:.1f}%")
+        k3.metric("Total Reclamos", int(df_f["Reclamos"].sum()))
+        
+        fig = px.bar(df_f.groupby("Region")["Satisfaccion"].mean().reset_index(), x="Region", y="Satisfaccion", color="Satisfaccion", color_continuous_scale="RdYlGn")
         st.plotly_chart(fig, use_container_width=True)
-    with col_chart2:
-        st.markdown("#### 🚦 Semáforo de Calidad")
-        for z in zona_sel:
-            sat_z = df_f[df_f["Region"]==z]["Satisfaccion"].mean()
-            if sat_z >= 85: st.success(f"🟢 {z}: {sat_z:.1f}%")
-            elif sat_z >= 70: st.warning(f"🟡 {z}: {sat_z:.1f}%")
-            else: st.error(f"🔴 {z}: {sat_z:.1f}%")
-else:
-    st.info("💡 Por favor, registre hallazgos en el SGC para activar el análisis.")
 
 # ================================
-# TABS (SISTEMA DE ELIMINACIÓN REFORZADO)
+# TABS (ELIMINACIÓN CORREGIDA SIN TECLAS)
 # ================================
 st.markdown("---")
 tab1, tab2 = st.tabs(["🛠️ Gestión de Histórico","📑 Auditoría ISO 9001 PRO"])
@@ -272,72 +187,46 @@ tab1, tab2 = st.tabs(["🛠️ Gestión de Histórico","📑 Auditoría ISO 9001
 with tab1:
     st.subheader("⚙️ Control de Datos Históricos")
     if not df.empty:
-        # Usamos el editor y capturamos el estado de las filas borradas
-        edit = st.data_editor(df, use_container_width=True, key="editor_historico", num_rows="dynamic")
+        # 1. Editor de datos para cambios de texto
+        edit = st.data_editor(df, use_container_width=True, key="editor_historico")
         
-        c_btn1, c_btn2 = st.columns(2)
-        
-        if c_btn1.button("🔄 Guardar Cambios Realizados"):
+        if st.button("🔄 Guardar Cambios de Texto"):
             conn = sqlite3.connect(DB)
-            for _,r in edit.iterrows():
+            for _, r in edit.iterrows():
                 conn.execute("""UPDATE auditoria SET Fecha=?,Nombre=?,Contacto=?,Ciudad=?,Region=?,Canal=?,Satisfaccion=?,Reclamos=?,Motivo=?,Observaciones=? WHERE id=?""",
-                             (str(r["Fecha"]),r["Nombre"],r["Contacto"],r["Ciudad"],r["Region"],r["Canal"],r["Satisfaccion"],r["Reclamos"],r["Motivo"],r["Observaciones"],r["id"]))
-            conn.commit(); conn.close(); st.success("SGC Actualizado"); st.rerun()
+                             (str(r["Fecha"]), r["Nombre"], r["Contacto"], r["Ciudad"], r["Region"], r["Canal"], r["Satisfaccion"], r["Reclamos"], r["Motivo"], r["Observaciones"], r["id"]))
+            conn.commit(); conn.close()
+            st.success("✅ Cambios de texto guardados"); st.rerun()
 
-        # ESTE ES EL BOTÓN QUE ESTAMOS CORRIGIENDO
-        if c_btn2.button("⚠️ ELIMINAR FILAS MARCADAS"):
-            # Detectamos qué filas fueron borradas manualmente en el editor de Streamlit
-            estado_editor = st.session_state["editor_historico"]
-            filas_borradas_indices = estado_editor.get("deleted_rows", [])
-            
-            if filas_borradas_indices:
+        st.markdown("---")
+        # 2. SECCIÓN DE ELIMINACIÓN DIRECTA (Solo Botón)
+        st.subheader("🗑️ Eliminar Registros")
+        ids_disponibles = df["id"].tolist()
+        seleccionados = st.multiselect("Seleccione los IDs que desea eliminar definitivamente:", ids_disponibles)
+        
+        if st.button("⚠️ ELIMINAR SELECCIONADOS"):
+            if seleccionados:
                 conn = sqlite3.connect(DB)
-                # Obtenemos los IDs reales de las filas que el usuario marcó para borrar
-                ids_a_borrar = [df.iloc[i]["id"] for i in filas_borradas_indices]
-                
-                for id_db in ids_a_borrar:
-                    conn.execute("DELETE FROM auditoria WHERE id = ?", (int(id_db),))
-                
-                conn.commit()
-                conn.close()
+                for id_del in seleccionados:
+                    conn.execute("DELETE FROM auditoria WHERE id = ?", (id_del,))
+                conn.commit(); conn.close()
                 st.cache_data.clear()
-                st.success(f"✅ Se eliminaron {len(ids_a_borrar)} registros de la base de datos.")
+                st.success(f"✅ Se eliminaron {len(seleccionados)} registros correctamente.")
                 st.rerun()
             else:
-                # Si el usuario no usó la tecla SUPR, intentamos la comparación de DataFrames por si acaso
-                ids_actuales = set(edit["id"].tolist())
-                ids_originales = set(df["id"].tolist())
-                ids_faltantes = ids_originales - ids_actuales
-                
-                if ids_faltantes:
-                    conn = sqlite3.connect(DB)
-                    for id_f in ids_faltantes:
-                        conn.execute("DELETE FROM auditoria WHERE id = ?", (int(id_f),))
-                    conn.commit(); conn.close()
-                    st.cache_data.clear(); st.success("Registros eliminados"); st.rerun()
-                else:
-                    st.info("Instrucción: 1. Selecciona la fila a la izquierda. 2. Presiona 'Supr'. 3. Dale a este botón.")
+                st.warning("Seleccione al menos un ID para eliminar.")
 
 with tab2:
-    st.subheader("📑 Análisis de No Conformidades ISO 9001")
-    if PDF_OK:
-        pdf_file = generar_pdf(df_f, nps, avg_sat, st.session_state.usuario)
-        st.download_button("📥 Descargar Reporte de Auditoría PDF", pdf_file, f"Reporte_ISO_TQ_{date.today()}.pdf")
-    if not df_f.empty:
-        fallas = df_f[df_f["Motivo"]!="Ninguna"]
+    st.subheader("📑 Auditoría ISO 9001")
+    if not df.empty:
+        fallas = df[df["Motivo"]!="Ninguna"]
         if not fallas.empty:
-            for f, c in fallas["Motivo"].value_counts().items():
-                info = MATRIZ_ISO.get(f, {})
-                with st.expander(f"📌 {f.upper()} | {c} Incidentes | Riesgo: {info.get('riesgo')}"):
-                    c_iso1, c_iso2 = st.columns(2)
-                    with c_iso1:
-                        st.markdown(f"**🔍 Causa Raíz:**\n{info.get('causa')}")
-                        st.markdown(f"**⚖️ Numeral ISO:**\n{info.get('numeral')}")
-                    with c_iso2:
-                        st.markdown(f"**👤 Responsable:**\n{info.get('responsable')}")
-                        st.markdown(f"**⏱️ SLA:**\n{info.get('sla')}")
-                    st.info(f"**🎯 Acción Correctiva:**\n{info.get('solucion')}")
+            for m in fallas["Motivo"].unique():
+                info = MATRIZ_ISO.get(m, {})
+                with st.expander(f"📌 {m} - Riesgo: {info.get('riesgo')}"):
+                    st.write(f"**Numeral:** {info.get('numeral')}")
+                    st.write(f"**Acción Correctiva:** {info.get('solucion')}")
         else:
-            st.success("✅ CUMPLIMIENTO TOTAL: Operación bajo estándares ISO.")
+            st.success("✅ Cumplimiento total.")
 
-st.caption(f"SGC TQ v17.5 | © {date.today().year} Sistema de Gestión de Calidad - Tecnoquímicas | Proyecto Jhon Marin")
+st.caption(f"SGC TQ v19.0 | © {date.today().year} Sistema de Gestión de Calidad - Tecnoquímicas | Proyecto Jhon Marin")
