@@ -264,7 +264,7 @@ else:
     st.info("💡 Por favor, registre hallazgos en el SGC para activar el análisis.")
 
 # ================================
-# TABS (ELIMINACIÓN MEJORADA)
+# TABS (ELIMINACIÓN CORREGIDA)
 # ================================
 st.markdown("---")
 tab1, tab2 = st.tabs(["🛠️ Gestión de Histórico","📑 Auditoría ISO 9001 PRO"])
@@ -272,7 +272,7 @@ tab1, tab2 = st.tabs(["🛠️ Gestión de Histórico","📑 Auditoría ISO 9001
 with tab1:
     st.subheader("⚙️ Control de Datos Históricos")
     if not df.empty:
-        # Editor de datos con selección habilitada
+        # Editor de datos - num_rows="dynamic" permite borrar filas con la tecla SUPR
         edit = st.data_editor(df, use_container_width=True, key="editor_historico", num_rows="dynamic")
         
         c_btn1, c_btn2 = st.columns(2)
@@ -284,20 +284,26 @@ with tab1:
                              (str(r["Fecha"]),r["Nombre"],r["Contacto"],r["Ciudad"],r["Region"],r["Canal"],r["Satisfaccion"],r["Reclamos"],r["Motivo"],r["Observaciones"],r["id"]))
             conn.commit(); conn.close(); st.success("SGC Actualizado"); st.rerun()
 
+        # LÓGICA DE ELIMINACIÓN CORREGIDA
         if c_btn2.button("⚠️ ELIMINAR FILAS MARCADAS"):
-            # Identificar filas que el usuario borró en el editor
-            ids_actuales = set(edit["id"])
-            ids_originales = set(df["id"])
-            ids_a_borrar = ids_originales - ids_actuales
+            # Obtenemos los IDs que quedan en el editor
+            ids_que_quedan = set(edit["id"].tolist())
+            # Obtenemos los IDs que estaban originalmente
+            ids_originales = set(df["id"].tolist())
+            # La diferencia son los que el usuario borró físicamente en la tabla
+            ids_a_eliminar = ids_originales - ids_que_quedan
             
-            if ids_a_borrar:
+            if ids_a_eliminar:
                 conn = sqlite3.connect(DB)
-                for id_b in ids_a_borrar:
-                    conn.execute("DELETE FROM auditoria WHERE id = ?", (id_b,))
-                conn.commit(); conn.close()
-                st.cache_data.clear(); st.warning("Registros eliminados de la base de datos"); st.rerun()
+                for id_borrar in ids_a_eliminar:
+                    conn.execute("DELETE FROM auditoria WHERE id = ?", (id_borrar,))
+                conn.commit()
+                conn.close()
+                st.cache_data.clear()
+                st.success(f"✅ Se eliminaron {len(ids_a_eliminar)} registros correctamente.")
+                st.rerun()
             else:
-                st.info("Para eliminar: selecciona el número de fila en la izquierda de la tabla y presiona la tecla 'Supr' o 'Delete', luego dale a este botón.")
+                st.info("Para eliminar: Haz clic en el número de fila (extremo izquierdo), presiona la tecla 'Supr' (o Delete) en tu teclado para que la fila desaparezca, y luego pulsa este botón.")
 
 with tab2:
     st.subheader("📑 Análisis de No Conformidades ISO 9001")
