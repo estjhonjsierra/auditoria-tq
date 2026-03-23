@@ -7,7 +7,7 @@ from datetime import date, timedelta
 # ==========================================
 st.set_page_config(page_title="App Auditoría TQ - PRO", layout="wide")
 
-# Columnas actualizadas con "Ciudad"
+# Columnas definitivas
 COLUMNAS = [
     'Fecha', 'Nombre', 'Contacto', 'Ciudad', 'Region', 'Canal',
     'Satisfaccion', 'Reclamos', 'Motivo PQRS', 'Observaciones'
@@ -39,14 +39,14 @@ SOLUCIONES_ISO = {
 }
 
 # ==========================================
-# SIMULADOR DE LOGIN / ROLES (Nivel Empresa)
+# ENCABEZADO Y ROLES
 # ==========================================
 col_login1, col_login2 = st.columns([8, 2])
 with col_login2:
     rol_usuario = st.selectbox("🔐 Perfil Activo:", ["Supervisor", "Auditor", "Gerencia"])
 
 # ==========================================
-# SIDEBAR: INGRESO DE DATOS
+# SIDEBAR: INGRESO Y ELIMINACIÓN (ZONA DE ACCIÓN)
 # ==========================================
 st.sidebar.title("🏢 TECNOQUÍMICAS")
 st.sidebar.markdown("Sistema de Gestión - Ingreso")
@@ -54,10 +54,10 @@ st.sidebar.markdown("Sistema de Gestión - Ingreso")
 with st.sidebar.form("formulario", clear_on_submit=True):
     nombre = st.text_input("Nombre Cliente")
     contacto = st.text_input("Contacto")
-    ciudad = st.text_input("Ciudad / Municipio") # NUEVO CAMPO
+    ciudad = st.text_input("Ciudad / Municipio") 
     region = st.selectbox("Región", ["Antioquia", "Bogotá", "Valle", "Costa", "Otro"])
-    canal = st.selectbox("Canal", ["Ventas", "Mercadeo", "Digital"]) # CORRECCIÓN LÓGICA
-    satisfaccion = st.slider("Satisfacción", 0, 100, 80)
+    canal = st.selectbox("Canal", ["Ventas", "Mercadeo", "Digital"]) 
+    satisfaccion = st.slider("Satisfacción (%)", 0, 100, 80)
     reclamos = st.number_input("Cantidad PQRS", 0, 50, 0)
     motivo = st.selectbox("Motivo PQRS", [
         "Ninguna (0 PQRS)", "1. Calidad", "2. Precios", "3. Logística",
@@ -65,6 +65,8 @@ with st.sidebar.form("formulario", clear_on_submit=True):
         "7. Averías", "8. Cambios", "9. Publicidad", "10. Otro"
     ])
     obs = st.text_area("Observaciones")
+    
+    # BOTÓN GUARDAR
     guardar = st.form_submit_button("Guardar Registro")
 
 if guardar:
@@ -73,151 +75,106 @@ if guardar:
         canal, satisfaccion, reclamos, motivo, obs
     ]], columns=COLUMNAS)
 
-    # Guarda en ambos para mantener sincronía inicial
     st.session_state.datos_historico = pd.concat([st.session_state.datos_historico, nuevo], ignore_index=True)
     st.session_state.datos_dashboard = pd.concat([st.session_state.datos_dashboard, nuevo], ignore_index=True)
     st.sidebar.success("✅ Registro guardado")
 
-# ==========================================
-# MAIN APP
-# ==========================================
-st.title("🛡️ Panel de Auditoría BI")
+# ESPACIO Y BOTÓN ELIMINAR (Tal cual lo pediste)
+st.sidebar.markdown("---")
+if st.sidebar.button("🗑️ Eliminar último registro", use_container_width=True):
+    if not st.session_state.datos_dashboard.empty:
+        # Solo afecta al dashboard, no al histórico (Nivel PRO)
+        st.session_state.datos_dashboard = st.session_state.datos_dashboard.iloc[:-1]
+        st.sidebar.warning("⚠️ Registro eliminado del Dashboard")
+        st.rerun()
+    else:
+        st.sidebar.error("No hay registros para eliminar")
 
-tab1, tab2, tab3 = st.tabs(["📊 Dashboard Analítico", "📁 Base de Datos (Editable)", "📑 Informe Ejecutivo"])
+# ==========================================
+# CUERPO PRINCIPAL
+# ==========================================
+st.title("🛡️ Sistema de Auditoría BI - TQ")
 
-# ==========================================
-# PESTAÑA 1: DASHBOARD ANALÍTICO
-# ==========================================
+tab1, tab2, tab3 = st.tabs(["📊 Dashboard Analítico", "📁 Base de Datos", "📑 Informe Ejecutivo"])
+
+# PESTAÑA 1: DASHBOARD
 with tab1:
-    st.subheader("Filtros Avanzados 📌")
-    
-    # 7. FILTROS POR FECHA Y AVANZADOS
+    st.subheader("Filtros de Análisis")
     f_col1, f_col2, f_col3 = st.columns(3)
-    filtro_fecha = f_col1.selectbox("📅 Periodo", ["Historico Total", "Hoy", "Últimos 7 días", "Este Mes"])
-    filtro_region = f_col2.selectbox("📍 Filtrar Región", ["Todas"] + list(st.session_state.datos_dashboard['Region'].unique()))
-    filtro_canal = f_col3.selectbox("🔄 Filtrar Canal", ["Todos"] + list(st.session_state.datos_dashboard['Canal'].unique()))
-
-    # Aplicar filtros al DataFrame del Dashboard
-    df_dash = st.session_state.datos_dashboard.copy()
     
-    # Lógica de Fechas
+    filtro_fecha = f_col1.selectbox("📅 Periodo", ["Historico Total", "Hoy", "Últimos 7 días", "Este Mes"])
+    filtro_region = f_col2.selectbox("📍 Región", ["Todas"] + list(st.session_state.datos_dashboard['Region'].unique()))
+    filtro_canal = f_col3.selectbox("🔄 Canal", ["Todos"] + list(st.session_state.datos_dashboard['Canal'].unique()))
+
+    # Lógica de Filtrado
+    df_dash = st.session_state.datos_dashboard.copy()
     if not df_dash.empty:
         df_dash['Fecha'] = pd.to_datetime(df_dash['Fecha']).dt.date
-        hoy = date.today()
         if filtro_fecha == "Hoy":
-            df_dash = df_dash[df_dash['Fecha'] == hoy]
+            df_dash = df_dash[df_dash['Fecha'] == date.today()]
         elif filtro_fecha == "Últimos 7 días":
-            df_dash = df_dash[df_dash['Fecha'] >= (hoy - timedelta(days=7))]
-        elif filtro_fecha == "Este Mes":
-            df_dash = df_dash[df_dash['Fecha'].apply(lambda x: x.month == hoy.month and x.year == hoy.year)]
-
-    if filtro_region != "Todas":
-        df_dash = df_dash[df_dash['Region'] == filtro_region]
-    if filtro_canal != "Todos":
-        df_dash = df_dash[df_dash['Canal'] == filtro_canal]
-
-    # BOTÓN INTELIGENTE (Solo afecta Dashboard)
-    if st.button("🗑️ Eliminar último registro del Dashboard"):
-        if not st.session_state.datos_dashboard.empty:
-            st.session_state.datos_dashboard = st.session_state.datos_dashboard.iloc[:-1]
-            st.rerun()
-
-    st.markdown("---")
+            df_dash = df_dash[df_dash['Fecha'] >= (date.today() - timedelta(days=7))]
+            
+        if filtro_region != "Todas":
+            df_dash = df_dash[df_dash['Region'] == filtro_region]
+        if filtro_canal != "Todos":
+            df_dash = df_dash[df_dash['Canal'] == filtro_canal]
 
     if df_dash.empty:
-        st.warning("No hay datos para los filtros seleccionados.")
+        st.warning("Sin datos para mostrar con los filtros actuales.")
     else:
-        # 5. INDICADOR VISUAL DE DESEMPEÑO
-        sat_promedio = df_dash['Satisfaccion'].mean()
-        if sat_promedio > 80:
-            color_sat = "🟢 Excelente"
-        elif sat_promedio >= 60:
-            color_sat = "🟡 Regular"
-        else:
-            color_sat = "🔴 Crítico"
-
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Registros Visibles", len(df_dash))
-        c2.metric("Satisfacción", f"{sat_promedio:.1f}%", color_sat)
-        c3.metric("Total PQRS", int(df_dash['Reclamos'].sum()))
-        c4.metric("Canal Principal", df_dash['Canal'].mode()[0] if not df_dash.empty else "N/A")
+        # Indicadores Visuales (Semáforo)
+        promedio = df_dash['Satisfaccion'].mean()
+        status = "🟢" if promedio > 80 else "🟡" if promedio >= 60 else "🔴"
+        
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Total Registros", len(df_dash))
+        c2.metric("Satisfacción Promedio", f"{promedio:.1f}%", f"{status} Desempeño")
+        c3.metric("PQRS Totales", int(df_dash['Reclamos'].sum()))
 
         st.markdown("---")
-        
-        # 4. DOBLE GRÁFICA COMPARATIVA (PRO)
-        st.subheader("📈 Comparativa: Selección vs Nacional")
+        # Doble Gráfica (Comparativa)
         g1, g2 = st.columns(2)
-        
         with g1:
-            st.markdown(f"**Datos Filtrados (Región: {filtro_region})**")
+            st.write("**Desempeño Local (Filtro)**")
             st.line_chart(df_dash.groupby('Fecha')['Satisfaccion'].mean())
-            
         with g2:
-            st.markdown("**Datos Nacionales (Sin Filtro)**")
+            st.write("**Desempeño Nacional (Histórico)**")
             st.line_chart(st.session_state.datos_historico.groupby('Fecha')['Satisfaccion'].mean())
 
-# ==========================================
-# PESTAÑA 2: HISTÓRICO Y EDICIÓN
-# ==========================================
+# PESTAÑA 2: BASE DE DATOS (EDICIÓN)
 with tab2:
-    st.subheader("Gestión de Base de Datos")
-    st.info("💡 Haz doble clic en cualquier celda para editarla. Selecciona una fila a la izquierda para borrarla.")
-    
+    st.subheader("Histórico de Auditorías")
     if rol_usuario in ["Auditor", "Gerencia"]:
-        # 9. EDICIÓN DE REGISTROS Y BORRADO SELECCIONADO
         st.session_state.datos_historico = st.data_editor(
             st.session_state.datos_historico, 
-            num_rows="dynamic", # Permite añadir o borrar filas seleccionadas
+            num_rows="dynamic",
             use_container_width=True,
-            key="editor_hist"
+            key="db_editor"
         )
     else:
-        st.warning("Tu rol de Supervisor solo permite visualizar el histórico.")
         st.dataframe(st.session_state.datos_historico, use_container_width=True)
 
-# ==========================================
-# PESTAÑA 3: INFORME DESCARGABLE
-# ==========================================
+# PESTAÑA 3: INFORME
 with tab3:
-    st.subheader("📄 Generador de Informes Ejecutivos")
-    
-    if st.session_state.datos_historico.empty:
-        st.info("Sin datos para generar informe.")
-    else:
-        df_p = st.session_state.datos_historico[st.session_state.datos_historico['Motivo PQRS'] != "Ninguna (0 PQRS)"]
-        
-        if not df_p.empty:
-            top_motivo = df_p['Motivo PQRS'].mode()[0]
-            causa_raiz = "Falla sistémica en el proceso" if len(df_p) > 5 else "Falla puntual u operativa"
-            solucion = SOLUCIONES_ISO.get(top_motivo, "Revisión técnica.")
+    st.subheader("Análisis de Causa Raíz e ISO")
+    if not st.session_state.datos_historico.empty:
+        df_pqrs = st.session_state.datos_historico[st.session_state.datos_historico['Motivo PQRS'] != "Ninguna (0 PQRS)"]
+        if not df_pqrs.empty:
+            peor_motivo = df_pqrs['Motivo PQRS'].mode()[0]
+            plan = SOLUCIONES_ISO.get(peor_motivo, "Revisión general.")
             
-            informe_texto = f"""
-            INFORME DE AUDITORÍA TECNOQUÍMICAS
+            informe = f"""
+            INFORME EJECUTIVO TQ - {date.today()}
             -----------------------------------
-            Fecha de generación: {date.today()}
-            Registros evaluados: {len(st.session_state.datos_historico)}
-            
-            📌 HALLAZGO PRINCIPAL:
-            El principal motivo de PQRS es: {top_motivo} con un total de {len(df_p[df_p['Motivo PQRS'] == top_motivo])} incidencias.
-            
-            🔍 CAUSA RAÍZ SUGERIDA:
-            {causa_raiz} relacionada con la categoría de {top_motivo.split('. ')[1] if '. ' in top_motivo else top_motivo}.
-            
-            ✅ SOLUCIÓN PROPUESTA (Basado en ISO 9001):
-            {solucion}
+            HALLAZGO: {peor_motivo}
+            ANÁLISIS: Se detecta recurrencia en el canal {df_pqrs['Canal'].mode()[0]}.
+            ACCIÓN ISO: {plan}
             """
-            
-            st.code(informe_texto, language="markdown")
-            
-            # 8. INFORME DESCARGABLE
-            st.download_button(
-                label="📥 Descargar Informe Completo (.txt)",
-                data=informe_texto,
-                file_name=f"Informe_Auditoria_{date.today()}.txt",
-                mime="text/plain"
-            )
+            st.code(informe)
+            st.download_button("📥 Descargar Informe", informe, file_name="Reporte_TQ.txt")
         else:
-            st.success("No hay PQRS registradas. Operación al 100%.")
+            st.success("Operación Limpia: 0 PQRS detectadas.")
 
 st.markdown("---")
-st.markdown("<p style='text-align: center; color: gray;'>© 2026 Auditoría TQ - Nivel Empresarial</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'>© 2026 Auditoría TQ - Software Nivel Profesional</p>", unsafe_allow_html=True)
