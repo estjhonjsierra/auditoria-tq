@@ -17,7 +17,7 @@ except:
 # ================================
 # CONFIGURACIÓN Y ESTILO UI
 # ================================
-st.set_page_config(page_title="TQ BI Enterprise v17.5 Platinum", layout="wide", page_icon="💊")
+st.set_page_config(page_title="Auditoría de Calidad TQ", layout="wide", page_icon="💊")
 
 # 📊 MATRIZ TÉCNICA ISO 9001 AMPLIADA (Nivel Profesional)
 MATRIZ_ISO = {
@@ -80,7 +80,7 @@ def check_password():
         with st.container():
             user = st.text_input("Usuario")
             password = st.text_input("Contraseña", type="password")
-            if st.button("Ingresar Sistema Platinum"):
+            if st.button("Ingresar Sistema de Auditoría"):
                 usuarios_db = {
                     "equipotq": {"pass": hash_pass("tqcalidad2024"), "role": "Equipo Auditor"}
                 }
@@ -190,7 +190,7 @@ def generar_pdf(df, nps, avg, usuario):
 # ================================
 # SIDEBAR (GESTIÓN Y REGISTRO)
 # ================================
-st.sidebar.title("🏢 TQ BI PRO v17.5")
+st.sidebar.title("🏢 Auditoría de Calidad TQ")
 st.sidebar.markdown(f"**Usuario:** `{st.session_state.usuario}`")
 st.sidebar.markdown(f"**Rol:** `{st.session_state.rol}`")
 st.sidebar.markdown("---")
@@ -252,7 +252,7 @@ if st.sidebar.button("🚪 Cerrar Sesión"):
 # ================================
 # DASHBOARD EJECUTIVO
 # ================================
-st.title("🏢 TQ Business Intelligence Enterprise")
+st.title("🏢 Sistema de Auditoría de Calidad TQ")
 st.markdown("---")
 
 df = load_data()
@@ -384,4 +384,4 @@ with tab2:
        else:
            st.success("✅ **CUMPLIMIENTO TOTAL:** La operación cumple con el 100% de los estándares ISO en el filtro seleccionado.")
 
-st.caption(f"TQ BI Enterprise v17.5 Platinum | © {date.today().year} Tecnoquímicas S.A. | Auditoría Senior")
+st.caption(f"Auditoría de Calidad TQ | © {date.today().year} Tecnoquímicas S.A. | Auditoría Senior")
