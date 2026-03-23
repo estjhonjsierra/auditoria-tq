@@ -164,7 +164,7 @@ def generar_pdf(df, nps, avg, usuario):
     pdf.ln(5)
 
     # Auditoria
-    fallas = df[df["Motivo"] != "Ninguna"]
+    fallas = df[df["Motivo"] != "Ninguna"] if "Motivo" in df.columns else pd.DataFrame()
     pdf.set_font("Arial", "B", 14)
     pdf.cell(190, 10, "2. ANALISIS DE NO CONFORMIDADES ISO 9001", ln=True)
     
@@ -305,12 +305,19 @@ with tab1:
     if not df.empty:
         with st.expander("🗑️ Herramientas de Eliminación"):
             col_del1, col_del2 = st.columns([1,3])
-            id_borrar = col_del1.number_input("ID del Registro", min_value=0, step=1)
+            
+            # FIX: Usar selectbox con los IDs reales para evitar borrar IDs inexistentes
+            ids_disponibles = df["id"].tolist() if not df.empty else []
+            id_borrar = col_del1.selectbox("ID del Registro", options=ids_disponibles)
+            
             if col_del2.button("⚠️ ELIMINAR REGISTRO POR ID"):
-                conn = sqlite3.connect(DB)
-                conn.execute(f"DELETE FROM auditoria WHERE id = {id_borrar}")
-                conn.commit(); conn.close()
-                st.cache_data.clear(); st.success(f"Registro {id_borrar} eliminado permanentemente."); st.rerun()
+                if ids_disponibles: # Validar que sí haya registros para borrar
+                    conn = sqlite3.connect(DB)
+                    conn.execute(f"DELETE FROM auditoria WHERE id = {id_borrar}")
+                    conn.commit(); conn.close()
+                    st.cache_data.clear()
+                    st.success(f"Registro {id_borrar} eliminado permanentemente.")
+                    st.rerun()
 
         st.markdown("#### Tabla Maestra de Auditoría")
         edit = st.data_editor(df, use_container_width=True)
