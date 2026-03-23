@@ -9,7 +9,7 @@ from fpdf import FPDF
 st.set_page_config(page_title="TQ BI Enterprise FINAL", layout="wide")
 
 # =========================
-# SEGURIDAD
+# 🔐 SEGURIDAD
 # =========================
 def hash_pass(p):
     return hashlib.sha256(p.encode()).hexdigest()
@@ -17,8 +17,9 @@ def hash_pass(p):
 def check_password():
     if not st.session_state.get("password_correct", False):
         st.title("🔐 Acceso Empresarial TQ")
-        user = st.text_input("Usuario")
-        password = st.text_input("Contraseña", type="password")
+        
+        user = st.text_input("Usuario").strip().lower()
+        password = st.text_input("Contraseña", type="password").strip()
 
         if st.button("Ingresar"):
             usuarios_db = {
@@ -32,7 +33,7 @@ def check_password():
                 st.session_state["rol"] = usuarios_db[user]["role"]
                 st.rerun()
             else:
-                st.error("Credenciales inválidas")
+                st.error("❌ Credenciales inválidas")
         return False
     return True
 
@@ -40,7 +41,7 @@ if not check_password():
     st.stop()
 
 # =========================
-# BASE DE DATOS
+# 🗄 BASE DE DATOS
 # =========================
 DB = "tq_pro.db"
 
@@ -65,54 +66,49 @@ def load_data():
     df = pd.read_sql("SELECT * FROM auditoria", conn)
     conn.close()
     if not df.empty:
-        df["Fecha"] = pd.to_datetime(df["Fecha"]).dt.date
+        df["Fecha"] = pd.to_datetime(df["Fecha"])
     return df
 
 # =========================
-# PDF PRO
+# 📄 PDF
 # =========================
 def generar_pdf_ejecutivo(df_filtrado, nps, avg_sat, usuario):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(190, 10, "TECNOQUIMICAS S.A. - INFORME ESTRATEGICO", ln=True, align="C")
+    pdf.cell(190, 10, "TECNOQUIMICAS - INFORME ESTRATEGICO", ln=True, align="C")
+
     pdf.set_font("Arial", "", 10)
-    pdf.cell(190, 10, f"Emitido por: {usuario} | Fecha: {date.today()}", ln=True, align="C")
+    pdf.cell(190, 10, f"Usuario: {usuario} | Fecha: {date.today()}", ln=True, align="C")
+
     pdf.ln(10)
-
-    pdf.set_fill_color(0, 74, 173)
-    pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(190, 10, "KPIs", ln=True, fill=True)
+    pdf.cell(190, 10, "KPIs", ln=True)
 
-    pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "", 11)
     pdf.cell(95, 10, f"NPS: {nps:.1f}")
     pdf.cell(95, 10, f"Satisfacción: {avg_sat:.1f}%", ln=True)
 
     pdf.ln(5)
-    pdf.set_fill_color(230, 230, 230)
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(190, 10, "No Conformidades", ln=True, fill=True)
+    pdf.cell(190, 10, "No conformidades", ln=True)
 
-    pdf.set_font("Arial", "", 9)
     fallas = df_filtrado[df_filtrado["Motivo"] != "Ninguna"]
 
     if not fallas.empty:
         for _, row in fallas.iterrows():
-            obs = str(row["Observaciones"])[:150]
-            txt = f"ID {row['id']} | {row['Ciudad']} | {row['Motivo']} | {obs}"
+            txt = f"{row['Ciudad']} | {row['Motivo']} | {str(row['Observaciones'])[:100]}"
             pdf.multi_cell(0, 8, txt)
     else:
-        pdf.cell(0, 10, "Sin hallazgos.", ln=True)
+        pdf.cell(0, 10, "Sin hallazgos", ln=True)
 
     return pdf.output(dest="S").encode("latin-1")
 
 # =========================
-# SIDEBAR
+# 🧾 SIDEBAR
 # =========================
 st.sidebar.title("🏢 TQ BI PRO")
-st.sidebar.write(f"{st.session_state.usuario} | {st.session_state.rol}")
+st.sidebar.write(f"👤 {st.session_state.usuario} | {st.session_state.rol}")
 
 if st.sidebar.button("Cerrar sesión"):
     for k in list(st.session_state.keys()):
@@ -140,14 +136,14 @@ with st.sidebar.form("form"):
         st.rerun()
 
 # =========================
-# DASHBOARD
+# 📊 DASHBOARD
 # =========================
-st.title("📊 Dashboard")
+st.title("📊 Dashboard de Calidad")
 
 df = load_data()
 
 if df.empty:
-    st.info("Sin datos")
+    st.info("No hay datos aún")
 else:
     df_f = df.copy()
 
@@ -161,13 +157,34 @@ else:
     col2.metric("Satisfacción", round(avg_sat,1))
     col3.metric("PQRS", int(df_f["Reclamos"].sum()))
 
-    # 🔥 NUEVO: gráfico fallas
+    # 🚦 SEMÁFORO
+    if avg_sat >= 85:
+        st.success("🟢 Excelente")
+    elif avg_sat >= 70:
+        st.warning("🟡 Atención")
+    else:
+        st.error("🔴 Crítico")
+
+    # 📊 FALLAS
     fallas = df_f[df_f["Motivo"]!="Ninguna"]
     if not fallas.empty:
         st.plotly_chart(px.pie(fallas, names="Motivo", values="Reclamos"), use_container_width=True)
 
+    # 📈 TENDENCIA
+    trend = df_f.groupby("Fecha")["Satisfaccion"].mean().reset_index()
+    st.plotly_chart(px.line(trend, x="Fecha", y="Satisfaccion"), use_container_width=True)
+
+    # 🧠 INSIGHT
+    if not fallas.empty:
+        peor = fallas.groupby("Region")["Reclamos"].sum().idxmax()
+        st.error(f"⚠️ Región crítica: {peor}")
+
+    # 🚨 ALERTA
+    if df_f["Reclamos"].sum() > 50:
+        st.error("🚨 Alto volumen de reclamos")
+
 # =========================
-# GESTIÓN
+# 🛠 GESTIÓN
 # =========================
 st.markdown("---")
 tab1, tab2 = st.tabs(["Gestión","ISO"])
@@ -185,7 +202,6 @@ with tab1:
         st.success("Actualizado")
         st.rerun()
 
-    # 🔥 NUEVO: eliminar
     id_del = st.number_input("ID a eliminar",0,1000,0)
     if st.button("Eliminar"):
         conn = sqlite3.connect(DB)
@@ -197,6 +213,6 @@ with tab1:
 
 with tab2:
     pdf_data = generar_pdf_ejecutivo(df_f, nps, avg_sat, st.session_state.usuario)
-    st.download_button("Descargar PDF", pdf_data, "reporte.pdf")
+    st.download_button("📥 Descargar PDF", pdf_data, "reporte.pdf")
 
-st.caption("TQ BI FINAL 🚀")
+st.caption("TQ BI Enterprise FINAL 🔥 | Jhon Marin")
