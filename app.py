@@ -1,15 +1,15 @@
 import streamlit as st
 import pandas as pd              
 import sqlite3 
-import numpy as np # <--- AQUÍ ESTABA EL ERROR, YA ESTÁ SOLUCIONADO
+import numpy as np 
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import date, timedelta
 
 # ==========================================
-# 0. ESTILOS VISUALES (WOW FACTOR)
+# 0. ESTILOS VISUALES
 # ==========================================
-st.set_page_config(page_title="TQ BI v11.1 Titanium", layout="wide")
+st.set_page_config(page_title="TQ BI v11.2 Titanium", layout="wide")
 
 st.markdown("""
     <style>
@@ -29,6 +29,13 @@ st.markdown("""
         color: #6c757d;
         font-size: 14px;
         text-transform: uppercase;
+    }
+    .iso-box {
+        background-color: #eef2f7;
+        padding: 15px;
+        border-left: 5px solid #004aad;
+        margin-bottom: 10px;
+        border-radius: 5px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -134,10 +141,7 @@ else:
     df_f = db[(db['Region'].isin(f_reg)) & (db['Canal'].isin(f_can))]
 
     if not df_f.empty:
-        # KPIs CON DISEÑO CSS
         k1, k2, k3, k4 = st.columns(4)
-        
-        # Cálculo NPS
         prom = len(df_f[df_f['Satisfaccion'] >= 90])
         detr = len(df_f[df_f['Satisfaccion'] < 70])
         nps = ((prom - detr) / len(df_f)) * 100
@@ -152,7 +156,6 @@ else:
         with k4:
             st.markdown(f"<div class='kpi-card'><p class='kpi-label'>Tasa de Falla</p><p class='kpi-value'>{(df_f['Reclamos'].sum()/len(df_f)):.2f}</p></div>", unsafe_allow_html=True)
 
-        # GRÁFICOS
         g1, g2 = st.columns(2)
         with g1:
             fig_bar = px.bar(df_f.groupby('Region')['Satisfaccion'].mean().reset_index(), 
@@ -165,19 +168,16 @@ else:
             st.plotly_chart(fig_scat, use_container_width=True)
 
 # ==========================================
-# 5. GESTIÓN CRUD Y EXPORTACIÓN
+# 5. GESTIÓN CRUD Y REPORTE ISO (MEJORADO)
 # ==========================================
 st.markdown("---")
-tab1, tab2 = st.tabs(["🛠️ Gestión de Datos", "📑 Reporte ISO"])
+tab1, tab2 = st.tabs(["🛠️ Gestión de Datos", "📑 Reporte de Hallazgos ISO 9001"])
 
 with tab1:
     st.subheader("Editor Maestro (CRUD)")
     if not db.empty:
-        # EXPORTACIÓN
         csv = df_f.to_csv(index=False).encode('utf-8')
         st.download_button("📥 Descargar Reporte Filtrado (CSV)", csv, "tq_report.csv", "text/csv")
-        
-        # EDITOR
         edited = st.data_editor(db, num_rows="dynamic", use_container_width=True)
         if st.button("💾 Guardar Cambios en SQL"):
             conn = sqlite3.connect(DB_SQL)
@@ -188,7 +188,6 @@ with tab1:
             st.success("Cambios sincronizados.")
             st.rerun()
         
-        # BORRAR POR ID SEGURO
         id_del = st.number_input("ID a eliminar", min_value=1, step=1)
         if st.button("🗑️ Eliminar Definitivamente"):
             if st.session_state.user_role == "Administrador":
@@ -202,6 +201,43 @@ with tab1:
                 st.error("Permiso denegado.")
 
 with tab2:
-    st.info("Reporte automático para cumplimiento de norma ISO 9001:2015.")
+    st.subheader("📋 Dictamen de Auditoría y Mejora Continua")
+    
+    if db.empty:
+        st.write("No hay datos para generar el dictamen.")
+    else:
+        # 1. Análisis de No Conformidades (Problemas)
+        hallazgos = db[db['Motivo_PQRS'] != "Ninguna"]
+        
+        if hallazgos.empty:
+            st.success("✅ **Dictamen:** No se detectan no conformidades en el ciclo actual.")
+        else:
+            # Diccionario de soluciones ISO
+            SOLUCIONES_ISO = {
+                "1. Calidad": {"ref": "Numeral 8.7", "desc": "Control de salidas no conformes.", "accion": "Revisar cadena de frío y empaques en la ciudad afectada."},
+                "2. Precios": {"ref": "Numeral 8.2.1", "desc": "Comunicación con el cliente.", "accion": "Auditoría de precios en PDV y ajuste de margen comercial."},
+                "3. Logística": {"ref": "Numeral 8.4", "desc": "Control de procesos externos.", "accion": "Evaluación de desempeño del transportador (OTIF)."},
+                "4. Agotados": {"ref": "Numeral 8.1", "desc": "Planificación operativa.", "accion": "Revisar stock de seguridad y frecuencias de reabastecimiento."},
+                "5. Atención": {"ref": "Numeral 7.2", "desc": "Competencia del personal.", "accion": "Capacitación obligatoria en protocolo de servicio TQ."}
+            }
 
-st.caption(f"TQ Titanium v11.1 | Engine: SQL + Plotly | {date.today()}")
+            st.write(f"Se detectaron **{len(hallazgos)}** hallazgos críticos:")
+            
+            # Resumen dinámico por tipo de problema
+            resumen_fallas = hallazgos['Motivo_PQRS'].value_counts()
+            
+            for falla, cant in resumen_fallas.items():
+                info = SOLUCIONES_ISO.get(falla, {"ref": "Numeral 10.2", "desc": "No conformidad.", "accion": "Análisis de causa raíz."})
+                
+                st.markdown(f"""
+                <div class="iso-box">
+                    <h4 style="margin:0; color:#c0392b;">🔴 PROBLEMA: {falla.upper()} ({cant} casos)</h4>
+                    <p style="margin:5px 0;"><b>Referencia ISO 9001:</b> {info['ref']} - {info['desc']}</p>
+                    <p style="margin:5px 0; color:#2c3e50;"><b>✅ PLAN CORRECTIVO:</b> {info['accion']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+            # Recomendación General
+            st.info("**Nota del Auditor:** Se recomienda iniciar el ciclo PHVA (Planear, Hacer, Verificar, Actuar) para mitigar la recurrencia en estos numerales.")
+
+st.caption(f"TQ Titanium v11.2 | ISO Audit Expert | {date.today()}")
