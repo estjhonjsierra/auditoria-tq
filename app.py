@@ -27,7 +27,7 @@ def check_password():
         if st.button("Ingresar"):
             usuarios_db = {
                 "admin": {"pass": hash_pass("tq2026"), "role": "Administrador"},
-                "jhon.marin": {"pass": hash_pass("auditoria2026"), "role": "Auditor"}
+                "jhonmarin": {"pass": hash_pass("Jhonmarin31"), "role": "Auditor Senior"}
             }
 
             if user in usuarios_db and hash_pass(password) == usuarios_db[user]["pass"]:
@@ -81,7 +81,7 @@ def load_data():
 init_db()
 
 # ==========================================
-# 3. CIUDADES DINÁMICAS (PRO)
+# 3. CIUDADES DINÁMICAS
 # ==========================================
 try:
     ciudades_df = pd.read_csv("ciudades_colombia.csv")
@@ -142,7 +142,6 @@ else:
     df_f = df[(df["Region"].isin(reg)) & (df["Canal"].isin(can))]
 
     if not df_f.empty:
-        # KPI
         prom = len(df_f[df_f["Satisfaccion"]>=90])
         detr = len(df_f[df_f["Satisfaccion"]<70])
         nps = ((prom-detr)/len(df_f))*100 if len(df_f)>0 else 0
@@ -154,17 +153,15 @@ else:
         k3.metric("PQRS", int(df_f["Reclamos"].sum()))
         k4.metric("Tasa Falla", f"{(df_f['Reclamos'].sum()/len(df_f)):.2f}")
 
-        # INSIGHT AUTOMÁTICO
         if df_f["Reclamos"].sum()>0:
             top = df_f.groupby("Region")["Reclamos"].sum().idxmax()
             st.error(f"Zona crítica: {top}")
 
-        # GRÁFICOS
         st.plotly_chart(px.bar(df_f.groupby("Region")["Satisfaccion"].mean().reset_index(),
                                x="Region",y="Satisfaccion",color="Satisfaccion"))
 
 # ==========================================
-# 6. CRUD SEGURO
+# 6. CRUD
 # ==========================================
 st.markdown("---")
 tab1,tab2 = st.tabs(["Gestión","ISO"])
@@ -191,7 +188,7 @@ with tab1:
         st.rerun()
 
 # ==========================================
-# 7. ISO INTELIGENTE
+# 7. ISO + RESUMEN EJECUTIVO
 # ==========================================
 with tab2:
     st.subheader("📑 Análisis ISO Inteligente")
@@ -211,7 +208,11 @@ with tab2:
             "Atención": "Capacitación"
         }
 
+        total_fallas = 0
+
         for falla,cantidad in conteo.items():
+
+            total_fallas += cantidad
 
             if cantidad > 20:
                 prioridad = "🔴 ALTA"
@@ -225,6 +226,25 @@ with tab2:
             - Casos: {cantidad}
             - Prioridad: {prioridad}
             - Acción: {SOL.get(falla,"Análisis")}
+            """)
+
+        # 🔥 NUEVO: RESUMEN EJECUTIVO
+        st.markdown("---")
+        if st.button("📄 Generar Resumen Ejecutivo"):
+            top_falla = conteo.idxmax()
+
+            st.success(f"""
+            🧠 **RESUMEN EJECUTIVO DE AUDITORÍA**
+
+            - Total de fallas detectadas: {total_fallas}
+            - Principal no conformidad: {top_falla}
+            - Nivel de riesgo: {'ALTO' if total_fallas > 20 else 'MEDIO'}
+
+            📌 **Recomendación estratégica:**
+            Priorizar acciones correctivas sobre {top_falla} y ejecutar plan de mejora continua (PHVA).
+
+            📊 **Conclusión:**
+            Se requiere intervención para garantizar cumplimiento ISO 9001 y mejorar la experiencia del cliente.
             """)
 
 # ==========================================
