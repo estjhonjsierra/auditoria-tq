@@ -81,7 +81,6 @@ def check_password():
             user = st.text_input("Usuario (Equipo Auditor)")
             password = st.text_input("Contraseña Corporativa", type="password")
             if st.button("Ingresar al Sistema"):
-                # CREDENCIAL ÚNICA PARA EL EQUIPO (SIN GUIONES)
                 usuarios_db = {
                     "equipotq": {"pass": hash_pass("tqcalidad2024"), "role": "Equipo Auditor"}
                 }
@@ -127,7 +126,7 @@ def load_data():
     return df
 
 # ================================
-# PDF EJECUTIVO MEJORADO
+# PDF EJECUTIVO MEJORADO (CORREGIDO)
 # ================================
 def generar_pdf(df, nps, avg, usuario):
     if not PDF_OK: return None
@@ -139,7 +138,7 @@ def generar_pdf(df, nps, avg, usuario):
     
     pdf.set_font("Arial", "", 10)
     pdf.set_text_color(0, 0, 0)
-    pdf.cell(190, 8, f"Auditor Responsable: {usuario} | Fecha de Emisión: {date.today()}", ln=True, align="C")
+    pdf.cell(190, 8, f"Auditor Responsable: {usuario} | Fecha de Emision: {date.today()}", ln=True, align="C")
     pdf.ln(10)
     
     pdf.set_font("Arial", "B", 14)
@@ -161,7 +160,8 @@ def generar_pdf(df, nps, avg, usuario):
                    f"NUMERAL: {info.get('numeral','')}\n"
                    f"ACCION: {info.get('solucion','')}\n"
                    f"RESPONSABLE: {info.get('responsable','')} | SLA: {info.get('sla','')}\n")
-            pdf.multi_cell(0, 5, txt)
+            # FIX: ignorar caracteres que no sean latin-1 para evitar crash
+            pdf.multi_cell(0, 5, txt.encode('latin-1', 'replace').decode('latin-1'))
             pdf.ln(3)
             
     pdf.ln(10)
@@ -171,7 +171,8 @@ def generar_pdf(df, nps, avg, usuario):
     conclusion = "Operacion estable" if nps > 50 else "Se requiere intervencion inmediata en procesos de calidad."
     pdf.multi_cell(0, 8, f"Basado en los datos analizados: {conclusion}")
     
-    return pdf.output(dest="S").encode("latin-1")
+    # FIX: encode con ignore para evitar UnicodeEncodeError
+    return pdf.output(dest="S").encode("latin-1", "ignore")
 
 # ================================
 # SIDEBAR
@@ -201,7 +202,7 @@ with st.sidebar.form("form"):
 
     if st.form_submit_button("💾 Guardar en SGC"):
         conn = sqlite3.connect(DB)
-        conn.execute("INSERT INTO auditoria VALUES (NULL,?,?,?,?,?,?,?,?,?,?)",
+        conn.execute("INSERT INTO auditoria (Fecha, Nombre, Contacto, Ciudad, Region, Canal, Satisfaccion, Reclamos, Motivo, Observaciones) VALUES (?,?,?,?,?,?,?,?,?,?)",
                      (str(date.today()), nombre, contacto, ciudad, zona, canal, sat, pqrs, motivo, obs))
         conn.commit(); conn.close()
         st.cache_data.clear(); st.success("✅ Registro almacenado"); st.rerun()
@@ -276,12 +277,14 @@ with tab1:
         col_del1, col_del2 = st.columns([1,3])
         id_borrar = col_del1.number_input("ID a borrar", min_value=0, step=1)
         if col_del2.button("⚠️ ELIMINAR REGISTRO POR ID"):
-            conn = sqlite3.connect(DB); conn.execute(f"DELETE FROM auditoria WHERE id = {id_borrar}"); conn.commit(); conn.close()
+            conn = sqlite3.connect(DB); conn.execute("DELETE FROM auditoria WHERE id = ?", (id_borrar,)); conn.commit(); conn.close()
             st.cache_data.clear(); st.success(f"ID {id_borrar} eliminado"); st.rerun()
-        edit = st.data_editor(df, use_container_width=True)
+        
+        edit = st.data_editor(df, use_container_width=True, key="editor_historico")
         if st.button("🔄 Sincronizar"):
             conn = sqlite3.connect(DB)
             for _,r in edit.iterrows():
+                # FIX: Sintaxis de SQL corregida con parámetros seguros
                 conn.execute("""UPDATE auditoria SET Fecha=?,Nombre=?,Contacto=?,Ciudad=?,Region=?,Canal=?,Satisfaccion=?,Reclamos=?,Motivo=?,Observaciones=? WHERE id=?""",
                              (str(r["Fecha"]),r["Nombre"],r["Contacto"],r["Ciudad"],r["Region"],r["Canal"],r["Satisfaccion"],r["Reclamos"],r["Motivo"],r["Observaciones"],r["id"]))
             conn.commit(); conn.close(); st.success("SGC Actualizado"); st.rerun()
@@ -289,6 +292,7 @@ with tab1:
 with tab2:
     st.subheader("📑 Análisis de No Conformidades ISO 9001")
     if PDF_OK:
+        # Usamos df_f para que el reporte sea dinámico según los filtros del dashboard
         pdf_file = generar_pdf(df_f, nps, avg_sat, st.session_state.usuario)
         st.download_button("📥 Descargar Reporte de Auditoría PDF", pdf_file, f"Reporte_ISO_TQ_{date.today()}.pdf")
     if not df_f.empty:
