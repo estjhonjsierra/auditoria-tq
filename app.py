@@ -82,9 +82,7 @@ def check_password():
             password = st.text_input("Contraseña", type="password")
             if st.button("Ingresar Sistema Platinum"):
                 usuarios_db = {
-                    "equipotq": {"pass": hash_pass("tqcalidad2024"), "role": "Equipo Auditor"},
-                    "admin": {"pass": hash_pass("tq2026"), "role": "Administrador"},
-                    "jhonmarin": {"pass": hash_pass("Jhonmarin31."), "role": "Auditor Senior"}
+                    "equipotq": {"pass": hash_pass("tqcalidad2024"), "role": "Equipo Auditor"}
                 }
                 if user.strip() in usuarios_db and hash_pass(password) == usuarios_db[user.strip()]["pass"]:
                     st.session_state["password_correct"] = True
