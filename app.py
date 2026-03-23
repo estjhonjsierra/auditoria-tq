@@ -1,275 +1,391 @@
 import streamlit as st
-import pandas as pd
-import sqlite3
-import plotly.express as px
-import hashlib
-import io
-from datetime import date
 
-# =================================================================
-# 1. IMPORT PDF SEGURO (FPDF)
-# =================================================================
-try:
-    from fpdf import FPDF
-    PDF_OK = True
-except ImportError:
-    PDF_OK = False
+import pandas as pd              
 
-# =================================================================
-# 2. CONFIGURACIÓN E INTERFAZ (UI/UX)
-# =================================================================
-st.set_page_config(
-    page_title="TQ BI Enterprise v17.5 Platinum", 
-    layout="wide", 
-    page_icon="💊",
-    initial_sidebar_state="expanded"
-)
+import os
 
-# Estilo CSS personalizado
-st.markdown("""
-    <style>
-    .main { background-color: #f5f7f9; }
-    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; border: 1px solid #e0e0e0; }
-    .stAlert { border-radius: 10px; }
-    </style>
-    """, unsafe_with_html=True)
+import sqlite3 
 
-# 📊 MATRIZ TÉCNICA ISO 9001 AMPLIADA
-MATRIZ_ISO = {
-    "Calidad": {
-        "numeral": "8.7 Control de las salidas no conformes",
-        "hallazgo": "Desviación en los estándares técnicos del producto o empaque.",
-        "solucion": "Bloqueo inmediato de lote, análisis de causa raíz (Ishikawa) y disposición final.",
-        "riesgo": "ALTO 🔴",
-        "causa": "Falla en control de procesos productivos o materias primas.",
-        "responsable": "Gerente de Calidad / Planta",
-        "sla": "24 Horas"
-    },
-    "Precios": {
-        "numeral": "8.2.1 Comunicación con el cliente",
-        "hallazgo": "Inconsistencia entre precio facturado y precio exhibido.",
-        "solucion": "Auditoría de lista de precios en SAP y actualización de POP.",
-        "riesgo": "MEDIO 🟡",
-        "causa": "Desincronización de bases de datos comerciales.",
-        "responsable": "Director Comercial / Facturación",
-        "sla": "48 Horas"
-    },
-    "Logística": {
-        "numeral": "8.4 Control de procesos externos",
-        "hallazgo": "Incumplimiento en tiempos de entrega o averías.",
-        "solucion": "Re-evaluación del transportador y optimización de ruta.",
-        "riesgo": "ALTO 🔴",
-        "causa": "Falla en la cadena de suministros o transporte tercero.",
-        "responsable": "Jefe de Logística / Distribución",
-        "sla": "72 Horas"
-    },
-    "Agotados": {
-        "numeral": "8.1 Planificación y control operacional",
-        "hallazgo": "Ruptura de stock que afecta la continuidad.",
-        "solucion": "Ajuste de pronóstico de demanda y aceleración de reposición.",
-        "riesgo": "ALTO 🔴",
-        "causa": "Error en proyección de demanda o retraso de proveedores.",
-        "responsable": "Gerente de Compras / Planeación",
-        "sla": "48 Horas"
-    },
-    "Atención": {
-        "numeral": "7.2 Competencia",
-        "hallazgo": "Falta de conocimiento técnico del personal.",
-        "solucion": "Plan de re-entrenamiento en Universidad TQ.",
-        "riesgo": "BAJO 🟢",
-        "causa": "Brecha de capacitación en nuevos protocolos.",
-        "responsable": "Gestión Humana / Capacitación",
-        "sla": "1 Semana"
-    }
-}
+import numpy as np
 
-# =================================================================
-# 4. SEGURIDAD Y ACCESO
-# =================================================================
-def hash_pass(p):
-    return hashlib.sha256(p.strip().encode()).hexdigest()
+from datetime import date, timedelta
+
+
+
+# ==========================================
+
+# 1. SEGURIDAD PRO: ROLES Y SESIÓN
+
+# ==========================================
 
 def check_password():
-    if not st.session_state.get("password_correct", False):
-        st.title("🔐 Acceso Empresarial TQ")
-        user = st.text_input("Usuario")
-        password = st.text_input("Contraseña", type="password")
-        if st.button("Ingresar Sistema Platinum"):
-            usuarios_db = {
-                "admin": {"pass": hash_pass("tq2026"), "role": "Administrador"},
-                "jhonmarin": {"pass": hash_pass("Jhonmarin31."), "role": "Auditor Senior"},
-                "equipotq": {"pass": hash_pass("tqcalidad2024"), "role": "Equipo Auditor"}
-            }
-            if user.strip() in usuarios_db and hash_pass(password) == usuarios_db[user.strip()]["pass"]:
-                st.session_state["password_correct"] = True
-                st.session_state["usuario"] = user
-                st.session_state["rol"] = usuarios_db[user]["role"]
-                st.rerun()
-            else:
-                st.error("❌ Credenciales inválidas")
-        st.stop()
+
+    def password_entered():
+
+        # Diccionario de usuarios con ROLES (Admin vs Auditor)
+
+        usuarios_db = {
+
+            "admin": {"pass": "tq2026", "role": "Administrador"},
+
+            "jhon.marin": {"pass": "auditoria2026", "role": "Auditor Senior"}
+
+        }
+
+        
+
+        user = st.session_state["username"]
+
+        password = st.session_state["password"]
+
+        
+
+        if user in usuarios_db and password == usuarios_db[user]["pass"]:
+
+            st.session_state["password_correct"] = True
+
+            st.session_state["user_role"] = usuarios_db[user]["role"]
+
+            del st.session_state["password"] 
+
+        else:
+
+            st.session_state["password_correct"] = False
+
+
+
+    if "password_correct" not in st.session_state:
+
+        st.title("🔐 TQ Enterprise: Business Intelligence")
+
+        st.text_input("Usuario Corporativo", key="username")
+
+        st.text_input("Contraseña", type="password", key="password")
+
+        st.button("Acceder al Ecosistema", on_click=password_entered)
+
+        return False
+
+    elif not st.session_state["password_correct"]:
+
+        st.error("❌ Credenciales inválidas. Acceso denegado.")
+
+        return False
+
     return True
 
-check_password()
 
-# =================================================================
-# 5. BASE DE DATOS
-# =================================================================
-DB_NAME = "tq_pro.db"
+
+# ==========================================
+
+# 2. MOTOR SQLITE CON CACHÉ (RENDIMIENTO ⚡)
+
+# ==========================================
+
+DB_SQL = "tq_audit_final_v9.db"
+
+
 
 def init_db():
-    with sqlite3.connect(DB_NAME) as conn:
-        conn.execute("""CREATE TABLE IF NOT EXISTS auditoria (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, Fecha TEXT, Nombre TEXT, Contacto TEXT, 
-            Ciudad TEXT, Region TEXT, Canal TEXT, Satisfaccion REAL, 
-            Reclamos INTEGER, Motivo TEXT, Observaciones TEXT)""")
 
-def load_data():
-    with sqlite3.connect(DB_NAME) as conn:
-        df = pd.read_sql("SELECT * FROM auditoria", conn)
-        if not df.empty:
-            df["Fecha"] = pd.to_datetime(df["Fecha"]).dt.date
-        return df
+    conn = sqlite3.connect(DB_SQL)
+
+    c = conn.cursor()
+
+    c.execute('''CREATE TABLE IF NOT EXISTS auditoria 
+
+                 (Fecha TEXT, Nombre_Consumidor TEXT, Contacto TEXT, Ciudad_Residencia TEXT, 
+
+                  Region TEXT, Canal TEXT, Satisfaccion REAL, Reclamos INTEGER, 
+
+                  Motivo_PQRS TEXT, Observaciones TEXT)''')
+
+    conn.commit()
+
+    conn.close()
+
+
+
+@st.cache_data(ttl=600) # CACHÉ DE 10 MINUTOS (OPTIMIZACIÓN REAL)
+
+def cargar_datos_sql():
+
+    conn = sqlite3.connect(DB_SQL)
+
+    df = pd.read_sql_query("SELECT * FROM auditoria", conn)
+
+    conn.close()
+
+    if not df.empty:
+
+        df['Fecha'] = pd.to_datetime(df['Fecha']).dt.date
+
+    df.columns = ['Fecha', 'Nombre Consumidor', 'Contacto', 'Ciudad Residencia', 'Region', 'Canal', 'Satisfaccion', 'Reclamos', 'Motivo PQRS', 'Observaciones']
+
+    return df
+
+
+
+def guardar_dato_sql(datos):
+
+    conn = sqlite3.connect(DB_SQL)
+
+    c = conn.cursor()
+
+    c.execute("INSERT INTO auditoria VALUES (?,?,?,?,?,?,?,?,?,?)", datos)
+
+    conn.commit()
+
+    conn.close()
+
+    st.cache_data.clear() # Limpiar caché para ver el dato nuevo
+
+
 
 init_db()
 
-# =================================================================
-# 6. GENERACIÓN PDF (CORRECCIÓN DE CARACTERES)
-# =================================================================
-def generar_pdf(df_export, nps, avg_sat, usuario):
-    if not PDF_OK: return None
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", "B", 18)
-    pdf.set_text_color(0, 51, 102)
-    pdf.cell(190, 15, "TECNOQUIMICAS S.A - REPORTE EJECUTIVO", ln=True, align="C")
-    
-    pdf.set_font("Arial", "", 10)
-    pdf.set_text_color(0, 0, 0)
-    pdf.cell(190, 8, f"Auditor: {usuario} | Fecha: {date.today()}", ln=True, align="C")
-    
-    pdf.ln(10)
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(190, 10, "1. KPIs ESTRATEGICOS", ln=True)
-    pdf.set_font("Arial", "", 12)
-    pdf.cell(95, 10, f"NPS: {nps:.1f}%")
-    pdf.cell(95, 10, f"Satisfaccion: {avg_sat:.1f}%", ln=True)
-    
-    pdf.ln(5)
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(190, 10, "2. DETALLE DE NO CONFORMIDADES", ln=True)
-    
-    fallas = df_export[df_export["Motivo"] != "Ninguna"] if "Motivo" in df_export.columns else pd.DataFrame()
-    if not fallas.empty:
-        pdf.set_font("Arial", "", 9)
-        for _, r in fallas.iterrows():
-            # EL PARCHE: encode/decode para que no explote con tildes
-            txt = f"ID: {r['id']} | {r['Ciudad']} | Motivo: {r['Motivo']}".encode('latin-1', 'replace').decode('latin-1')
-            pdf.multi_cell(0, 5, txt)
-            pdf.ln(2)
-    
-    return pdf.output(dest="S").encode("latin-1", "ignore")
 
-# =================================================================
-# 7. SIDEBAR (CORRECCIÓN DE BOTÓN BORRAR)
-# =================================================================
-st.sidebar.title("🏢 TQ BI PRO v17.5")
-st.sidebar.markdown(f"**Usuario:** `{st.session_state.usuario}`")
 
-CIUDADES = sorted(["Leticia","Medellín","Arauca","Barranquilla","Cartagena","Tunja","Manizales","Popayán","Valledupar","Quibdó","Montería","Bogotá","Neiva","Santa Marta","Villavicencio","Pasto","Cúcuta","Armenia","Pereira","Bucaramanga","Sincelejo","Ibagué","Cali","Soacha","Buenaventura","Palmira","Tuluá","Barrancabermeja"])
-ZONAS = ["Antioquia", "Valle y Cauca", "Centro (Bogotá/Boyacá)", "Costa Norte", "Santanderes", "Eje Cafetero", "Sur (Huila/Nariño)", "Llanos/Amazonía"]
+st.set_page_config(page_title="TQ BI v9.0 - Plan de Mejora", layout="wide")
 
-with st.sidebar.form("form_registro"):
-    st.subheader("📝 Captura de Datos")
-    f_nom = st.text_input("Punto / Cliente")
-    f_con = st.text_input("Contacto")
-    f_ciu = st.selectbox("Ciudad", CIUDADES)
-    f_zon = st.selectbox("Zona Operativa", ZONAS)
-    f_can = st.selectbox("Canal", ["Ventas","Digital","Farma","Institucional"])
-    f_sat = st.slider("Satisfacción (%)", 0, 100, 85)
-    f_pqr = st.number_input("Reclamos", 0, 50, 0)
-    f_mot = st.selectbox("Motivo", ["Ninguna","Calidad","Precios","Logística","Agotados","Atención"])
-    f_obs = st.text_area("Notas Técnicas")
+
+
+if not check_password():
+
+    st.stop()
+
+
+
+# ==========================================
+
+# 3. SIDEBAR: REGISTRO Y CERRAR SESIÓN
+
+# ==========================================
+
+st.sidebar.title("🏢 Tecnoquímicas S.A.")
+
+st.sidebar.markdown(f"**Usuario:** {st.session_state.username}")
+
+st.sidebar.markdown(f"**Rol:** {st.session_state.user_role}")
+
+
+
+if st.sidebar.button("🚪 Cerrar Sesión Segura"):
+
+    st.session_state.clear()
+
+    st.rerun()
+
+
+
+with st.sidebar.form("form_v9", clear_on_submit=True):
+
+    st.subheader("📝 Registro de Hallazgos")
+
+    nombre = st.text_input("Nombre Consumidor")
+
+    contacto = st.text_input("Contacto")
+
+    ciudad_res = st.selectbox("Ciudad Residencia", ["Cali", "Bogotá", "Medellín", "Barranquilla", "Pereira", "Manizales"])
+
+    region_sel = st.selectbox("Región", ["Antioquia", "Bogotá D.C.", "Valle del Cauca", "Costa Caribe", "Eje Cafetero", "Santanderes"])
+
+    canal_sel = st.selectbox("Canal", ["Ventas Directas", "Mercadeo", "Digital", "Comunicación Directa"])
+
+    sat_val = st.slider("Nivel Satisfacción (%)", 0, 100, 80)
+
+    pqrs_val = st.number_input("Cantidad PQRS", 0, 100, 0)
+
+    motivo_sel = st.selectbox("Clasificación ISO", ["Ninguna (0 PQRS)", "1. Calidad", "2. Precios", "3. Logística", "4. Agotados", "5. Atención", "10. Otro"])
+
+    obs_txt = st.text_area("Observaciones del Auditor")
+
     
-    if st.form_submit_button("🚀 Guardar"):
-        with sqlite3.connect(DB_NAME) as conn:
-            conn.execute("INSERT INTO auditoria (Fecha, Nombre, Contacto, Ciudad, Region, Canal, Satisfaccion, Reclamos, Motivo, Observaciones) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                         (str(date.today()), f_nom, f_con, f_ciu, f_zon, f_can, f_sat, f_pqr, f_mot, f_obs))
+
+    if st.form_submit_button("💾 GUARDAR AUDITORÍA"):
+
+        if nombre and contacto:
+
+            fila = (str(date.today()), nombre, contacto, ciudad_res, region_sel, canal_sel, sat_val, pqrs_val, motivo_sel, obs_txt)
+
+            guardar_dato_sql(fila)
+
+            st.sidebar.success("✅ Almacenado en SQL")
+
+            st.rerun()
+
+
+
+# VALIDACIÓN DE BORRADO (SOLO PARA ADMIN)
+
+if st.session_state.user_role == "Administrador":
+
+    if st.sidebar.button("🗑️ Eliminar Último Registro"):
+
+        conn = sqlite3.connect(DB_SQL)
+
+        conn.execute("DELETE FROM auditoria WHERE rowid = (SELECT MAX(rowid) FROM auditoria)")
+
+        conn.commit()
+
+        conn.close()
+
+        st.cache_data.clear()
+
         st.rerun()
 
-st.sidebar.markdown("---")
-# PARCHE: Borrar último con confirmación para que no falle el estado
-if st.sidebar.button("🗑️ Borrar Último"):
-    with sqlite3.connect(DB_NAME) as conn:
-        conn.execute("DELETE FROM auditoria WHERE id = (SELECT MAX(id) FROM auditoria)")
-    st.sidebar.warning("Registro eliminado")
-    st.rerun()
 
-if st.sidebar.button("🚪 Cerrar Sesión"):
-    st.session_state.clear()
-    st.rerun()
 
-# =================================================================
-# 8. DASHBOARD
-# =================================================================
-st.title("🏢 TQ Business Intelligence Enterprise")
-df_master = load_data()
+# ==========================================
 
-if not df_master.empty:
-    col_f1, col_f2 = st.columns(2)
-    sel_zona = col_f1.multiselect("📍 Zona Operativa", ZONAS, default=ZONAS)
-    sel_can = col_f2.multiselect("📦 Canal", ["Ventas","Digital","Farma","Institucional"], default=["Ventas","Digital","Farma","Institucional"])
+# 4. DASHBOARD: ANALÍTICA WOW & IMPACTO
+
+# ==========================================
+
+st.title("📊 TQ Intelligence: Plan de Mejora Continua")
+
+db_actual = cargar_datos_sql()
+
+
+
+if not db_actual.empty:
+
+    f_reg = st.multiselect("📍 Segmentación Regional", db_actual['Region'].unique(), default=db_actual['Region'].unique())
+
+    df_f = db_actual[db_actual['Region'].isin(f_reg)]
+
+
+
+    # --- 🧠 INSIGHTS WOW (PROTEGIDOS CONTRA VACÍOS) ---
+
+    st.subheader("💡 Insights de Impacto Estratégico")
+
     
-    df_f = df_master[(df_master["Region"].isin(sel_zona)) & (df_master["Canal"].isin(sel_can))]
-    
-    if not df_f.empty:
-        # KPIs
-        prom = len(df_f[df_f["Satisfaccion"] >= 90])
-        detr = len(df_f[df_f["Satisfaccion"] < 70])
-        nps_val = ((prom - detr) / len(df_f)) * 100
-        avg_sat = df_f["Satisfaccion"].mean()
+
+    if not df_f.empty: # VALIDACIÓN DE VACÍOS (ANTI-CRASH)
+
+        c_i1, c_i2, c_i3 = st.columns(3)
+
         
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Loyalty NPS", f"{nps_val:.1f}%")
-        m2.metric("Customer Sat", f"{avg_sat:.1f}%")
-        m3.metric("Total PQRS", int(df_f["Reclamos"].sum()))
-        m4.metric("Tasa Falla", f"{(df_f['Reclamos'].sum()/len(df_f)):.2f}")
 
-        # Gráfico
-        fig = px.bar(df_f.groupby("Region")["Satisfaccion"].mean().reset_index(), 
-                     x="Region", y="Satisfaccion", color="Satisfaccion", color_continuous_scale="RdYlGn", title="🎯 Desempeño por Zona")
-        st.plotly_chart(fig, use_container_width=True)
+        with c_i1:
 
-# =================================================================
-# 9. TABS (ELIMINACIÓN POR ID MULTISELECT)
-# =================================================================
-tab1, tab2 = st.tabs(["🛠️ Gestión e Histórico", "📑 Auditoría ISO 9001 PRO"])
+            # INSIGHT 1: CONCENTRACIÓN
+
+            total_pqrs = db_actual['Reclamos'].sum()
+
+            if total_pqrs > 0:
+
+                critico = df_f.groupby('Region')['Reclamos'].sum().idxmax()
+
+                porc = (df_f.groupby('Region')['Reclamos'].sum().max() / total_pqrs) * 100
+
+                st.error(f"⚠️ **Fuga de Calidad:** {critico} concentra el **{porc:.1f}%** de PQRS.")
+
+        
+
+        with c_i2:
+
+            # INSIGHT 2: IMPACTO FINANCIERO (NUEVO WOW)
+
+            # Clientes con satisfacción < 60% que tienen reclamos
+
+            riesgo_ch = df_f[(df_f['Satisfaccion'] < 60) & (df_f['Reclamos'] > 0)]
+
+            porc_riesgo = (len(riesgo_ch) / len(df_f)) * 100 if len(df_f) > 0 else 0
+
+            st.warning(f"📉 **Impacto Financiero:** El **{porc_riesgo:.1f}%** de clientes están en riesgo crítico de abandono.")
+
+
+
+        with c_i3:
+
+            # INSIGHT 3: PEOR CANAL
+
+            peor_c = df_f.groupby('Canal')['Satisfaccion'].mean().idxmin()
+
+            st.info(f"🔄 **Canal Crítico:** El canal **{peor_c}** requiere rediseño de procesos.")
+
+
+
+    # --- MÉTRICAS Y GRÁFICAS ---
+
+    st.markdown("---")
+
+    m1, m2, m3 = st.columns(3)
+
+    if not df_f.empty:
+
+        m1.metric("Satisfacción Promedio", f"{df_f['Satisfaccion'].mean():.1f}%")
+
+        m2.metric("Auditorías", len(df_f))
+
+        m3.metric("PQRS Registradas", int(df_f['Reclamos'].sum()))
+
+
+
+    g1, g2 = st.columns(2)
+
+    with g1:
+
+        st.write("**🏆 Top Ciudades (Satisfacción)**")
+
+        # CORRECCIÓN DE BUG: 'Ciudad Residencia'
+
+        if not df_f.empty:
+
+            chart_data = df_f.groupby('Ciudad Residencia')['Satisfaccion'].mean().sort_values(ascending=False).head(5)
+
+            st.bar_chart(chart_data)
+
+            
+
+    with g2:
+
+        st.write("**📈 Histórico de Calidad**")
+
+        if not df_f.empty:
+
+            df_ev = df_f.groupby('Fecha')['Satisfaccion'].mean().sort_index()
+
+            st.line_chart(df_ev)
+
+
+
+# ==========================================
+
+# 5. TRAZABILIDAD E ISO
+
+# ==========================================
+
+st.markdown("---")
+
+tab1, tab2 = st.tabs(["🗄️ Trazabilidad de Auditoría", "📑 Plan ISO 9001"])
+
+
 
 with tab1:
-    if not df_master.empty:
-        st.subheader("🗑️ Eliminación Definitiva")
-        ids_to_del = st.multiselect("Seleccione IDs para borrar:", df_master["id"].unique())
-        if st.button("🚨 EJECUTAR ELIMINACIÓN"):
-            if ids_to_del:
-                with sqlite3.connect(DB_NAME) as conn:
-                    for i in ids_to_del:
-                        conn.execute("DELETE FROM auditoria WHERE id = ?", (i,))
-                st.success("Registros eliminados")
-                st.rerun()
-        
-        st.dataframe(df_master, use_container_width=True)
+
+    st.subheader("Base de Datos Maestra (SQL)")
+
+    st.dataframe(db_actual, use_container_width=True)
+
+
 
 with tab2:
-    if not df_master.empty:
-        if PDF_OK:
-            reporte = generar_pdf(df_f if 'df_f' in locals() else df_master, nps_val if 'nps_val' in locals() else 0, avg_sat if 'avg_sat' in locals() else 0, st.session_state.usuario)
-            st.download_button("📥 Descargar Reporte PDF", reporte, "Reporte_TQ.pdf")
-        
-        for m in df_master[df_master["Motivo"] != "Ninguna"]["Motivo"].unique():
-            info = MATRIZ_ISO.get(m, {})
-            with st.expander(f"📌 {m.upper()} - Riesgo: {info.get('riesgo')}"):
-                st.write(f"**Numeral:** {info.get('numeral')}")
-                st.write(f"**Solución:** {info.get('solucion')}")
-                st.write(f"**Responsable:** {info.get('responsable')}")
 
-st.caption(f"SGC TQ v19.8 Platinum | Jhon Marin | {date.today().year}")
+    st.subheader("Numerales ISO y Planes de Acción")
+
+    df_err = db_actual[db_actual['Motivo PQRS'] != "Ninguna (0 PQRS)"]
+
+    if not df_err.empty:
+
+        top_f = df_err['Motivo PQRS'].mode()[0]
+
+        st.error(f"🚩 **Hallazgo Recurrente:** {top_f}")
+
+        st.markdown(f"**Plan Sugerido:** Revisión inmediata del proceso bajo norma ISO 9001:2015.")
+
+
+
+st.caption(f"Tecnoquímicas S.A. | Auditoría BI Gold v9.0 | {date.today()}")     
