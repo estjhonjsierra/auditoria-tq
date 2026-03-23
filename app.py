@@ -285,8 +285,8 @@ def generar_pdf(df, nps, avg, usuario):
     conclusion = "Operacion estable" if nps > 50 else "Se requiere intervencion inmediata en procesos de calidad."
     pdf.multi_cell(0, 8, limpiar_texto(f"Basado en los datos analizados: {conclusion}"))
     
-    # Retornamos el PDF codificado correctamente
-    return pdf.output(dest="S").encode("latin-1", errors="replace")
+    # En fpdf2, .output() ya devuelve un bytearray, solo lo pasamos a bytes para Streamlit
+    return bytes(pdf.output())
 
 # ================================
 # SIDEBAR (GESTIÓN Y REGISTRO)
