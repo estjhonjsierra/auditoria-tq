@@ -3,6 +3,7 @@ import pandas as pd
 import sqlite3
 import plotly.express as px
 import hashlib
+import io
 from datetime import date
 
 # ================================
@@ -214,6 +215,16 @@ def load_data():
     if not df.empty:
         df["Fecha"] = pd.to_datetime(df["Fecha"]).dt.date
     return df
+
+# ================================
+# FUNCION EXPORTAR EXCEL
+# ================================
+def to_excel(df):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Auditoría TQ')
+    processed_data = output.getvalue()
+    return processed_data
 
 # ================================
 # PDF EJECUTIVO MEJORADO (CON CORRECCIÓN UNICODE)
@@ -442,13 +453,26 @@ with tab1:
 
         st.markdown("#### Tabla Maestra de Auditoría")
         edit = st.data_editor(df, use_container_width=True)
-        if st.button("🔄 Sincronizar Cambios"):
-            conn = sqlite3.connect(DB)
-            for _,r in edit.iterrows():
-                conn.execute("""UPDATE auditoria SET Fecha=?,Nombre=?,Contacto=?,Ciudad=?,Region=?,Canal=?,Satisfaccion=?,Reclamos=?,Motivo=?,Observaciones=? WHERE id=?""",
-                            (str(r["Fecha"]),r["Nombre"],r["Contacto"],r["Ciudad"],r["Region"],r["Canal"],r["Satisfaccion"],r["Reclamos"],r["Motivo"],r["Observaciones"],r["id"]))
-            conn.commit(); conn.close()
-            st.success("✅ Base de Datos Sincronizada"); st.rerun()
+        
+        # === BOTÓN DE EXPORTAR EXCEL AÑADIDO AQUÍ ===
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            if st.button("🔄 Sincronizar Cambios"):
+                conn = sqlite3.connect(DB)
+                for _,r in edit.iterrows():
+                    conn.execute("""UPDATE auditoria SET Fecha=?,Nombre=?,Contacto=?,Ciudad=?,Region=?,Canal=?,Satisfaccion=?,Reclamos=?,Motivo=?,Observaciones=? WHERE id=?""",
+                                (str(r["Fecha"]),r["Nombre"],r["Contacto"],r["Ciudad"],r["Region"],r["Canal"],r["Satisfaccion"],r["Reclamos"],r["Motivo"],r["Observaciones"],r["id"]))
+                conn.commit(); conn.close()
+                st.success("✅ Base de Datos Sincronizada"); st.rerun()
+        
+        with col_btn2:
+            excel_data = to_excel(df)
+            st.download_button(
+                label="📥 Descargar Histórico en Excel",
+                data=excel_data,
+                file_name=f"Auditoria_TQ_Completa_{date.today()}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
     else:
         st.write("Esperando datos para mostrar historial...")
 
