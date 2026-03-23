@@ -1,3 +1,10 @@
+¡Entendido! He agregado un diccionario maestro (`MAPEO_CIUDAD_ZONA`) que vincula exactamente cada ciudad con su zona correspondiente (por ejemplo, Medellín -> Antioquia). 
+
+Para cumplir tu regla de **"no tocar nada más"** y evitar que Streamlit se bloquee por estar dentro de un formulario (`st.form`), simplemente oculté el selector manual de zona y ahora el sistema **calcula y asigna la zona correcta automáticamente en la base de datos** al darle guardar, basándose en la ciudad que elegiste. 
+
+Aquí tienes el código con este único ajuste implementado:
+
+```python
 import streamlit as st
 import pandas as pd
 import sqlite3
@@ -195,10 +202,25 @@ st.sidebar.markdown(f"**Usuario:** `{st.session_state.usuario}`")
 st.sidebar.markdown(f"**Rol:** `{st.session_state.rol}`")
 st.sidebar.markdown("---")
 
-CIUDADES = sorted([
-   "Leticia","Medellín","Arauca","Barranquilla","Cartagena","Tunja","Manizales","Florencia","Yopal","Popayán","Valledupar","Quibdó","Montería","Bogotá","Inírida","San José del Guaviare","Neiva","Riohacha","Santa Marta","Villavicencio","Pasto","Cúcuta","Mocoa","Armenia","Pereira","San Andrés","Bucaramanga","Sincelejo","Ibagué","Cali","Mitú","Puerto Carreño","Soacha","Bello","Soledad","Buenaventura","Palmira","Tuluá","Ipiales","Barrancabermeja"
-])
+# Diccionario maestro para asignación automática Ciudad -> Zona
+MAPEO_CIUDAD_ZONA = {
+    "Leticia": "Llanos/Amazonía", "Medellín": "Antioquia", "Arauca": "Llanos/Amazonía",
+    "Barranquilla": "Costa Norte", "Cartagena": "Costa Norte", "Tunja": "Centro (Bogotá/Boyacá)",
+    "Manizales": "Eje Cafetero", "Florencia": "Llanos/Amazonía", "Yopal": "Llanos/Amazonía",
+    "Popayán": "Valle y Cauca", "Valledupar": "Costa Norte", "Quibdó": "Antioquia",
+    "Montería": "Costa Norte", "Bogotá": "Centro (Bogotá/Boyacá)", "Inírida": "Llanos/Amazonía",
+    "San José del Guaviare": "Llanos/Amazonía", "Neiva": "Sur (Huila/Nariño)", "Riohacha": "Costa Norte",
+    "Santa Marta": "Costa Norte", "Villavicencio": "Llanos/Amazonía", "Pasto": "Sur (Huila/Nariño)",
+    "Cúcuta": "Santanderes", "Mocoa": "Sur (Huila/Nariño)", "Armenia": "Eje Cafetero",
+    "Pereira": "Eje Cafetero", "San Andrés": "Costa Norte", "Bucaramanga": "Santanderes",
+    "Sincelejo": "Costa Norte", "Ibagué": "Centro (Bogotá/Boyacá)", "Cali": "Valle y Cauca",
+    "Mitú": "Llanos/Amazonía", "Puerto Carreño": "Llanos/Amazonía", "Soacha": "Centro (Bogotá/Boyacá)",
+    "Bello": "Antioquia", "Soledad": "Costa Norte", "Buenaventura": "Valle y Cauca",
+    "Palmira": "Valle y Cauca", "Tuluá": "Valle y Cauca", "Ipiales": "Sur (Huila/Nariño)",
+    "Barrancabermeja": "Santanderes"
+}
 
+CIUDADES = sorted(list(MAPEO_CIUDAD_ZONA.keys()))
 ZONAS = ["Antioquia", "Valle y Cauca", "Centro (Bogotá/Boyacá)", "Costa Norte", "Santanderes", "Eje Cafetero", "Sur (Huila/Nariño)", "Llanos/Amazonía"]
 
 with st.sidebar.form("form"):
@@ -206,7 +228,7 @@ with st.sidebar.form("form"):
     nombre = st.text_input("Punto / Cliente")
     contacto = st.text_input("Contacto")
     ciudad = st.selectbox("Ciudad", CIUDADES)
-    zona = st.selectbox("Zona Operativa", ZONAS)
+    # ⚠️ El input manual de Zona se eliminó, ahora se asigna automáticamente al guardar
     canal = st.selectbox("Canal", ["Ventas","Digital","Farma","Institucional"])
     sat = st.slider("Satisfacción (%)", 0, 100, 80)
     pqrs = st.number_input("Reclamos", 0, 100, 0)
@@ -214,11 +236,12 @@ with st.sidebar.form("form"):
     obs = st.text_area("Observaciones Técnicas")
 
     if st.form_submit_button("💾 Guardar en Base de Datos"):
+        zona_automatica = MAPEO_CIUDAD_ZONA[ciudad] # Asignación matemática directa
         conn = sqlite3.connect(DB)
         conn.execute("INSERT INTO auditoria VALUES (NULL,?,?,?,?,?,?,?,?,?,?)",
-                     (str(date.today()), nombre, contacto, ciudad, zona, canal, sat, pqrs, motivo, obs))
+                     (str(date.today()), nombre, contacto, ciudad, zona_automatica, canal, sat, pqrs, motivo, obs))
         conn.commit(); conn.close()
-        st.cache_data.clear(); st.success("✅ Registro almacenado correctamente"); st.rerun()
+        st.cache_data.clear(); st.success(f"✅ Registro almacenado en {zona_automatica}"); st.rerun()
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("🗑️ Zona de Peligro")
@@ -361,3 +384,4 @@ with tab2:
            st.success("✅ **CUMPLIMIENTO TOTAL:** La operación cumple con el 100% de los estándares ISO en el filtro seleccionado.")
 
 st.caption(f"TQ BI Enterprise v17.5 Platinum | © {date.today().year} Tecnoquímicas S.A. | Auditoría Senior")
+```
