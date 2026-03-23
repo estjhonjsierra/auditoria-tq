@@ -160,7 +160,6 @@ def generar_pdf(df, nps, avg, usuario):
                    f"NUMERAL: {info.get('numeral','')}\n"
                    f"ACCION: {info.get('solucion','')}\n"
                    f"RESPONSABLE: {info.get('responsable','')} | SLA: {info.get('sla','')}\n")
-            # FIX: ignorar caracteres que no sean latin-1 para evitar crash
             pdf.multi_cell(0, 5, txt.encode('latin-1', 'replace').decode('latin-1'))
             pdf.ln(3)
             
@@ -171,7 +170,6 @@ def generar_pdf(df, nps, avg, usuario):
     conclusion = "Operacion estable" if nps > 50 else "Se requiere intervencion inmediata en procesos de calidad."
     pdf.multi_cell(0, 8, f"Basado en los datos analizados: {conclusion}")
     
-    # FIX: encode con ignore para evitar UnicodeEncodeError
     return pdf.output(dest="S").encode("latin-1", "ignore")
 
 # ================================
@@ -276,7 +274,8 @@ with tab1:
     if not df.empty:
         col_del1, col_del2 = st.columns([1,3])
         id_borrar = col_del1.number_input("ID a borrar", min_value=0, step=1)
-        if col_del2.button("⚠️ ELIMINAR REGISTRO POR ID"):
+        # TEXTO ACTUALIZADO AQUÍ ABAJO
+        if col_del2.button("⚠️ ELIMINAR REGISTRO HISTÓRICO"):
             conn = sqlite3.connect(DB); conn.execute("DELETE FROM auditoria WHERE id = ?", (id_borrar,)); conn.commit(); conn.close()
             st.cache_data.clear(); st.success(f"ID {id_borrar} eliminado"); st.rerun()
         
@@ -284,7 +283,6 @@ with tab1:
         if st.button("🔄 Sincronizar"):
             conn = sqlite3.connect(DB)
             for _,r in edit.iterrows():
-                # FIX: Sintaxis de SQL corregida con parámetros seguros
                 conn.execute("""UPDATE auditoria SET Fecha=?,Nombre=?,Contacto=?,Ciudad=?,Region=?,Canal=?,Satisfaccion=?,Reclamos=?,Motivo=?,Observaciones=? WHERE id=?""",
                              (str(r["Fecha"]),r["Nombre"],r["Contacto"],r["Ciudad"],r["Region"],r["Canal"],r["Satisfaccion"],r["Reclamos"],r["Motivo"],r["Observaciones"],r["id"]))
             conn.commit(); conn.close(); st.success("SGC Actualizado"); st.rerun()
@@ -292,7 +290,6 @@ with tab1:
 with tab2:
     st.subheader("📑 Análisis de No Conformidades ISO 9001")
     if PDF_OK:
-        # Usamos df_f para que el reporte sea dinámico según los filtros del dashboard
         pdf_file = generar_pdf(df_f, nps, avg_sat, st.session_state.usuario)
         st.download_button("📥 Descargar Reporte de Auditoría PDF", pdf_file, f"Reporte_ISO_TQ_{date.today()}.pdf")
     if not df_f.empty:
